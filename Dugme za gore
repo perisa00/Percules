@@ -1,0 +1,7 @@
+<button id="topBtn" onclick="scrollToTop()">⬆ Povratak na vrh</button>
+
+<script>
+function scrollToTop() {
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+</script>
