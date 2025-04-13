@@ -7,7 +7,34 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Naslov stranice -->
     <h1>Dobrodošli na moju stranicu!</h1>
     <p>Ovo je osnovna index.html stranica.</p>
+
+    <!-- Kontakt sekcija -->
+    <section id="contact">
+        <h2>Kontaktirajte nas</h2>
+        <form>
+            <label for="name">Ime:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+            
+            <label for="message">Poruka:</label>
+            <textarea id="message" name="message" required></textarea>
+            
+            <button type="submit">Pošalji</button>
+        </form>
+    </section>
+
+    <!-- Dugme za povratak na vrh -->
+    <button id="topBtn" onclick="scrollToTop()">⬆ Povratak na vrh</button>
+
+    <script>
+        function scrollToTop() {
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+    </script>
 </body>
 </html>
