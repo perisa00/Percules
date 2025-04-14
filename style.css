@@ -2,7 +2,7 @@
 body {
     background-color: #000; /* Rezervna crna pozadina */
     background-image: url('Percules03.jpg'); /* Putanja do slike */
-    background-size: 80%; /* Smanjivanje slike na 80% originalne veličine */
+    background-size: 50%; /* Smanjivanje slike na 80% originalne veličine */
     background-position: center center; /* Centriranje slike horizontalno i vertikalno */
     background-repeat: no-repeat; /* Bez ponavljanja slike */
     background-attachment: fixed; /* Slika ostaje statična dok se skroluje */
@@ -84,34 +84,43 @@ form button:hover {
     background-color: #45a049;
 }
 
-/* Navigacija - centriranje i ravnomeran razmak */
+/* Navigacija - horizontalno i fiksno */
 nav {
-    display: flex; /* Aktivira flexbox */
-    flex-direction: column; /* Vertikalno raspoređivanje stavki */
-    justify-content: center; /* Centriranje stavki vertikalno */
-    align-items: center; /* Centriranje stavki horizontalno */
-    height: 100vh; /* Visina zauzima ceo prozor */
-    margin: 0; /* Bez margine */
+    position: fixed; /* Fiksira navigaciju na vrhu ekrana */
+    top: 0; /* Pozicija na vrhu stranice */
+    left: 0; /* Početak sa leve strane */
+    width: 100%; /* Širina navigacije preko cele stranice */
+    background-color: rgba(0, 0, 0, 0.8); /* Malo providna crna pozadina */
+    display: flex; /* Aktivira flexbox za horizontalni raspored */
+    justify-content: center; /* Centriranje stavki horizontalno */
+    padding: 10px 0; /* Prostor iznad i ispod navigacije */
+    z-index: 1000; /* Osigurava da ostane iznad ostalog sadržaja */
 }
 
 nav ul {
     list-style-type: none; /* Uklanja tačke sa liste */
-    padding: 0; /* Bez paddinga */
+    display: flex; /* Horizontalni raspored stavki */
     margin: 0; /* Bez margine */
+    padding: 0; /* Bez paddinga */
 }
 
 nav ul li {
-    margin: 10px 0; /* Prostor između stavki liste */
+    margin: 0 15px; /* Razmak između stavki */
 }
 
 nav ul li a {
     color: #d7a3f5; /* Ljubičasta boja linkova */
     text-decoration: none; /* Bez podvlačenja */
-    font-size: 1.5rem; /* Veličina fonta */
+    font-size: 1.2rem; /* Veličina fonta */
     font-weight: bold; /* Podebljano */
 }
 
 nav ul li a:hover {
     color: #fff; /* Promena boje na hover */
     text-decoration: underline; /* Dodaj podvlačenje na hover */
+}
+
+/* Dodajemo padding za sadržaj ispod navigacije */
+body {
+    padding-top: 60px; /* Prostor ispod navigacije, da sadržaj ne prelazi preko nje */
 }
