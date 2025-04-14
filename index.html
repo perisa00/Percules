@@ -10,46 +10,38 @@
     <meta name="keywords" content="personalni sajt, kontakt, portfolio, Aleksa Perišić">
     <meta name="author" content="Aleksa Perišić">
 
-    <!-- Open Graph Meta Tagovi za društvene mreže -->
-    <meta property="og:title" content="Dobrodošli na moj sajt">
-    <meta property="og:description" content="Ovo je moj personalni sajt gde možete da me kontaktirate i saznate više o mom radu.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://tvoja-domena.com">
-    <meta property="og:image" content="https://tvoja-domena.com/slika.jpg">
-
-    <!-- Twitter Meta Tagovi -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Dobrodošli na moj sajt">
-    <meta name="twitter:description" content="Ovo je moj personalni sajt gde možete da me kontaktirate i saznate više o mom radu.">
-    <meta name="twitter:image" content="https://tvoja-domena.com/slika.jpg">
+    <!-- Font Awesome za ikonice -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
     <!-- Link za CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Naslov stranice -->
-    <h1>Dobrodošli na moju stranicu!</h1>
+    <h1><i class="fas fa-home"></i> Dobrodošli na moju stranicu!</h1>
     <p>Ovo je osnovna index.html stranica.</p>
 
     <!-- Kontakt sekcija -->
     <section id="contact">
-        <h2>Kontaktirajte nas</h2>
+        <h2><i class="fas fa-envelope"></i> Kontaktirajte nas</h2>
         <form>
-            <label for="name">Ime:</label>
+            <label for="name"><i class="fas fa-user"></i> Ime:</label>
             <input type="text" id="name" name="name" required>
             
-            <label for="email">Email:</label>
+            <label for="email"><i class="fas fa-at"></i> Email:</label>
             <input type="email" id="email" name="email" required>
             
-            <label for="message">Poruka:</label>
+            <label for="message"><i class="fas fa-comment"></i> Poruka:</label>
             <textarea id="message" name="message" required></textarea>
             
-            <button type="submit">Pošalji</button>
+            <button type="submit"><i class="fas fa-paper-plane"></i> Pošalji</button>
         </form>
     </section>
 
     <!-- Dugme za povratak na vrh -->
-    <button id="topBtn" onclick="scrollToTop()">⬆ Povratak na vrh</button>
+    <button id="topBtn" onclick="scrollToTop()">
+        <i class="fas fa-arrow-up"></i> Povratak na vrh
+    </button>
 
     <script>
         function scrollToTop() {
@@ -57,4 +49,5 @@
         }
     </script>
 </body>
+</html>
 </html>
