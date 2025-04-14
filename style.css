@@ -2,7 +2,7 @@
 body {
     background-color: #000; /* Rezervna crna pozadina */
     background-image: url('Percules03.jpg'); /* Putanja do slike */
-    background-size: 80%; /* Smanjivanje slike na 80% originalne veličine */
+    background-size: 50%; /* Smanjivanje slike na 80% originalne veličine */
     background-position: center center; /* Centriranje slike horizontalno i vertikalno */
     background-repeat: no-repeat; /* Bez ponavljanja slike */
     background-attachment: fixed; /* Slika ostaje statična dok se skroluje */
