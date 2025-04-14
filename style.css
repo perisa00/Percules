@@ -83,3 +83,35 @@ form button {
 form button:hover {
     background-color: #45a049;
 }
+
+/* Navigacija - centriranje i ravnomeran razmak */
+nav {
+    display: flex; /* Aktivira flexbox */
+    flex-direction: column; /* Vertikalno raspoređivanje stavki */
+    justify-content: center; /* Centriranje stavki vertikalno */
+    align-items: center; /* Centriranje stavki horizontalno */
+    height: 100vh; /* Visina zauzima ceo prozor */
+    margin: 0; /* Bez margine */
+}
+
+nav ul {
+    list-style-type: none; /* Uklanja tačke sa liste */
+    padding: 0; /* Bez paddinga */
+    margin: 0; /* Bez margine */
+}
+
+nav ul li {
+    margin: 10px 0; /* Prostor između stavki liste */
+}
+
+nav ul li a {
+    color: #d7a3f5; /* Ljubičasta boja linkova */
+    text-decoration: none; /* Bez podvlačenja */
+    font-size: 1.5rem; /* Veličina fonta */
+    font-weight: bold; /* Podebljano */
+}
+
+nav ul li a:hover {
+    color: #fff; /* Promena boje na hover */
+    text-decoration: underline; /* Dodaj podvlačenje na hover */
+}
