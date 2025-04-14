@@ -1,7 +1,7 @@
 /* Osnovni stilovi */
 body {
     background-color: #000; /* Crna boja kao rezervna pozadina */
-    background-image: url('Percules03.jpg'); /* Putanja do slike */
+    background-image: url('Percules 03.jpg'); /* Putanja do slike */
     background-size: cover; /* Da slika pokriva celu pozadinu */
     background-position: center; /* Centriranje slike */
     background-repeat: no-repeat; /* Bez ponavljanja slike */
