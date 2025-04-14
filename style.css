@@ -1,9 +1,11 @@
 /* Osnovni stilovi */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
+    background-color: #000; /* Crna boja kao rezervna pozadina */
+    background-image: url('images/Percules03.jpg'); /* Putanja do slike */
+    background-size: cover; /* Da slika pokriva celu pozadinu */
+    background-position: center; /* Centriranje slike */
+    background-repeat: no-repeat; /* Bez ponavljanja slike */
+    font-family: Arial, sans-serif; /* Opcioni font za stranice */
 }
 
 h1 {
