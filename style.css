@@ -102,15 +102,16 @@ nav ul {
     display: flex; /* Horizontalni raspored stavki */
 }
 
-/* Dodajemo stil za stavke menija */
+/* Stil za stavke u navigaciji sa boljim kontrastom */
 nav a {
-    color: lightblue; /* Svetlo plava boja za tekst */
+    color: white; /* Bela boja za tekst radi boljeg kontrasta */
     text-decoration: none; /* Uklanja podvlačenje teksta */
     padding: 10px 15px; /* Dodaje prostor unutar okvira */
-    border: 2px solid lightblue; /* Dodaje svetlo plavi okvir */
+    border: 2px solid lightblue; /* Svetlo plavi okvir */
     border-radius: 5px; /* Zaobljeni uglovi okvira */
     margin: 5px; /* Razmak između stavki menija */
     display: inline-block; /* Prikazuje stavke u liniji */
+    background-color: rgba(70, 130, 180, 0.8); /* Svetlo plava pozadina sa malom providnošću */
     font-weight: bold; /* Podebljan tekst */
     transition: background-color 0.3s, color 0.3s; /* Animacija za hover */
 }
