@@ -100,8 +100,25 @@ nav {
 nav ul {
     list-style-type: none; /* Uklanja tačke sa liste */
     display: flex; /* Horizontalni raspored stavki */
-    margin: 0; /* Bez margine */
-    padding: 0; /* Bez paddinga */
+}
+
+/* Dodajemo stil za stavke menija */
+nav a {
+    color: lightblue; /* Svetlo plava boja za tekst */
+    text-decoration: none; /* Uklanja podvlačenje teksta */
+    padding: 10px 15px; /* Dodaje prostor unutar okvira */
+    border: 2px solid lightblue; /* Dodaje svetlo plavi okvir */
+    border-radius: 5px; /* Zaobljeni uglovi okvira */
+    margin: 5px; /* Razmak između stavki menija */
+    display: inline-block; /* Prikazuje stavke u liniji */
+    font-weight: bold; /* Podebljan tekst */
+    transition: background-color 0.3s, color 0.3s; /* Animacija za hover */
+}
+
+/* Promena boje pozadine na hover */
+nav a:hover {
+    background-color: lightblue; /* Svetlo plava pozadina */
+    color: black; /* Crna boja za tekst na hover */
 }
 
 nav ul li {
