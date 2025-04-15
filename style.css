@@ -9,9 +9,15 @@ body {
     font-family: Arial, sans-serif; /* Stil fonta za stranice */
 }
 
+/* Stil za glavnu poruku dobrodošlice */
 h1 {
-    color: #333;
+    color: white; /* Bela boja za tekst radi boljeg kontrasta */
     text-align: center;
+    background-color: rgba(0, 0, 0, 0.7); /* Providno crna pozadina */
+    padding: 15px; /* Dodaje prostor unutar okvira */
+    border-radius: 10px; /* Zaobljeni uglovi */
+    display: inline-block; /* Prikazuje okvir samo oko teksta */
+    margin: 20px auto; /* Centriranje sa razmakom iznad i ispod */
 }
 
 p {
