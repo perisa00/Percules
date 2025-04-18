@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Tesla Inspired</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(120deg, #70c5ce, #3a8cae);
+            overflow: hidden;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="backgroundCanvas"></canvas>
+    <header>
+        <h1>Welcome to Tesla Inspired</h1>
+        <p>Add your hero image here.</p>
+    </header>
+    <main>
+        <section id="paintball-products">
+            <h2>Paintball Products</h2>
+            <p>List your paintball products here with descriptions.</p>
+            <!-- Example product -->
+            <div>
+                <h3>Paintball Gun</h3>
+                <p>High-quality paintball gun for professionals and beginners.</p>
+            </div>
+            <!-- Add more products as needed -->
+        </section>
+    </main>
+    <button onclick="location.href='index.html'" style="position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 0);">
+        Back to Main Page
+    </button>
+    <script>
+        const canvas = document.getElementById("backgroundCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let wave = {
+            y: canvas.height / 2,
+            length: 0.01,
+            amplitude: 100,
+            frequency: 0.02
+        };
+
+        let mouse = {
+            x: 0,
+            y: 0
+        };
+
+        window.addEventListener("mousemove", (event) => {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+
+        function drawWave() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+
+            for (let i = 0; i < canvas.width; i++) {
+                const y =
+                    wave.y +
+                    Math.sin(i * wave.length + mouse.x * wave.frequency) *
+                    wave.amplitude *
+                    Math.sin(mouse.y * 0.01);
+                ctx.lineTo(i, y);
+            }
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function animate() {
+            drawWave();
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>

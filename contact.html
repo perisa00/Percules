@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Tesla Inspired</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(120deg, #ff7eb3, #ff758c);
+            transition: background 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h2>Contact Us</h2>
+        <p>Email: aleks@example.com</p>
+        <p>Phone: +381 64 123 4567</p>
+        <p>Address: Serbia, Belgrade</p>
+    </header>
+    <button onclick="location.href='index.html'" style="margin-top: 20px;">Back to Main Page</button>
+    <script>
+        document.addEventListener("mousemove", (event) => {
+            const x = event.clientX / window.innerWidth;
+            const y = event.clientY / window.innerHeight;
+            const color1 = `rgb(${Math.floor(255 * x)}, ${Math.floor(255 * y)}, 150)`;
+            const color2 = `rgb(${Math.floor(255 * (1 - x))}, ${Math.floor(255 * (1 - y))}, 200)`;
+            document.body.style.background = `linear-gradient(120deg, ${color1}, ${color2})`;
+        });
+    </script>
+</body>
+</html>

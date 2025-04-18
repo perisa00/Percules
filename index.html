@@ -5,33 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tesla Inspired</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="./images/spartan-icon.png" type="image/png">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(120deg, #ff7eb3, #ff758c);
+            transition: background 0.1s ease;
+        }
+    </style>
 </head>
 <body>
     <header>
         <nav>
             <ul>
-                <li><a href="#home">Home</a></li>
-                <li><a href="#products">Products</a></li>
-                <li><a href="#contact">Contact</a></li>
+                <li>
+                    <a href="home.html">
+                        <img src="./images/back-icon.png" alt="Back Icon" style="width: 16px; height: 16px; vertical-align: middle;"> Home
+                    </a>
+                </li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="portfolio.html">Portfolio</a></li>
+                <li><a href="about.html">About Me</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="game.html">Game</a></li>
             </ul>
         </nav>
     </header>
-    <main>
-        <section id="home">
-            <h1>Welcome to Tesla Inspired</h1>
-            <p>Add your hero image here.</p>
-        </section>
-        <section id="products">
-            <h2>Our Products</h2>
-            <p>Add product images and descriptions here.</p>
-        </section>
-        <section id="contact">
-            <h2>Contact Us</h2>
-            <p>Add contact form or details here.</p>
-        </section>
-    </main>
     <footer>
         <p>&copy; 2023 Tesla Inspired</p>
     </footer>
+    <script>
+        document.addEventListener("mousemove", (event) => {
+            const x = event.clientX / window.innerWidth;
+            const y = event.clientY / window.innerHeight;
+            const color1 = `rgb(${Math.floor(255 * x)}, ${Math.floor(255 * y)}, 150)`;
+            const color2 = `rgb(${Math.floor(255 * (1 - x))}, ${Math.floor(255 * (1 - y))}, 200)`;
+            document.body.style.background = `linear-gradient(120deg, ${color1}, ${color2})`;
+        });
+    </script>
 </body>
 </html>
