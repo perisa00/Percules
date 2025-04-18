@@ -1,0 +1,1 @@
+Update the content to reflect the actual purpose of the project, removing generic Astro starter kit text.

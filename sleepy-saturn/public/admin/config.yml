@@ -1,0 +1,16 @@
+backend:
+  name: git
+  branch: main # Glavna grana repozitorijuma
+
+media_folder: "public/uploads" # Gde će se čuvati slike
+public_folder: "/uploads"
+
+collections:
+  - name: "pages" # Upravljanje stranicama
+    label: "Stranice"
+    folder: "src/pages"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Naslov", name: "title", widget: "string" }
+      - { label: "Sadržaj", name: "body", widget: "markdown" }
