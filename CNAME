@@ -1,1 +1,1 @@
-www.percules.pro
+echo "www.percules.pro" > CNAME
