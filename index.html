@@ -1,268 +1,412 @@
 <!DOCTYPE html>
-<html lang="sr" dir="ltr">
+<html lang="sr">
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Percules · AI agent koji govori umesto mene</title>
-  <meta name="description" content="Percules je moj personalizovani AI agent – digitalni dvojnik koji uči kako razmišljam, odgovaram i donosim odluke." />
-  <meta name="robots" content="index,follow" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#0f172a" />
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Percules · AI agent koji govori umesto mene</title>
+    <meta name="description" content="Percules je moj personalizovani AI agent – digitalni dvojnik koji uči kako razmišljam, odgovaram i donosim odluke." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0f172a;
+            --bg-soft: #111c34;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.12);
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --card: rgba(15, 23, 42, 0.65);
+            --border: rgba(148, 163, 184, 0.25);
+            --shadow: 0 18px 48px rgba(15, 23, 42, 0.45);
+        }
 
-  <!-- Open Graph / Social -->
-  <link rel="canonical" href="https://percules.pro/" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://percules.pro/" />
-  <meta property="og:title" content="Percules · AI agent koji govori umesto mene" />
-  <meta property="og:description" content="Digitalni dvojnik koji uči kako razmišljam, odgovaram i donosim odluke." />
-  <meta property="og:image" content="https://percules.pro/og-image.jpg" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Percules · AI agent koji govori umesto mene" />
-  <meta name="twitter:description" content="Digitalni dvojnik koji uči kako razmišljam, odgovaram i donosim odluke." />
-  <meta name="twitter:image" content="https://percules.pro/og-image.jpg" />
+        * {
+            box-sizing: border-box;
+        }
 
-  <!-- Icons (po želji zameni putanje) -->
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+        body {
+            margin: 0;
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%), var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
 
-  <style>
-    :root{
-      --bg:#0f172a; --bg-soft:#111c34;
-      --accent:#38bdf8; --accent-soft:rgba(56,189,248,.12);
-      --text:#e2e8f0; --text-muted:#94a3b8;
-      --card:rgba(15,23,42,.65); --border:rgba(148,163,184,.25);
-      --shadow:0 18px 48px rgba(15,23,42,.45);
-      --wrap:1100px; --r:18px;
-      --pad:28px; --hdr:72px;
-    }
+        header {
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(12px);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.35) 85%, transparent);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            z-index: 10;
+        }
 
-    *{ box-sizing:border-box; }
-    html{ scroll-behavior:smooth; }
-    body{
-      margin:0; font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background: radial-gradient(circle at top, rgba(56,189,248,.12), transparent 55%), var(--bg);
-      color:var(--text); line-height:1.6;
-    }
-    a{ color:inherit; text-decoration:none; }
-    ::selection{ background: rgba(56,189,248,.28); }
+        .nav {
+            display: flex;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 28px;
+            align-items: center;
+            justify-content: space-between;
+        }
 
-    /* Skip link for a11y */
-    .skip-link{
-      position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden;
-    }
-    .skip-link:focus{
-      left:12px; top:12px; width:auto; height:auto; padding:10px 14px; border-radius:999px;
-      background:var(--accent); color:#0b1220; font-weight:700; z-index:1000;
-      box-shadow:0 10px 24px rgba(56,189,248,.35);
-    }
+        .nav-brand {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            font-size: 1.05rem;
+        }
 
-    header{
-      position:sticky; top:0; z-index:10;
-      backdrop-filter:blur(12px);
-      background:linear-gradient(180deg, rgba(15,23,42,.88), rgba(15,23,42,.35) 85%, transparent);
-      border-bottom:1px solid rgba(148,163,184,.15);
-    }
-    nav.nav{
-      display:flex; max-width:var(--wrap); margin:0 auto; padding:20px var(--pad);
-      align-items:center; justify-content:space-between; min-height:var(--hdr);
-    }
-    .nav-brand{ font-weight:700; letter-spacing:-.02em; font-size:1.05rem; }
-    .nav-links{ display:flex; gap:22px; font-size:.95rem; }
-    .nav-links a{ color:var(--text-muted); transition:color .18s ease; }
-    .nav-links a:hover, .nav-links a:focus-visible{ color:var(--text); }
+        .nav-links {
+            display: flex;
+            gap: 22px;
+            font-size: 0.95rem;
+        }
 
-    /* Shared layout */
-    .wrap{ max-width:var(--wrap); margin:0 auto; padding:0 var(--pad); }
-    .anchor{ scroll-margin-top: calc(var(--hdr) + 16px); }
+        .nav-links a {
+            color: var(--text-muted);
+            transition: color 0.18s ease;
+        }
 
-    /* Hero */
-    .hero{
-      padding:120px var(--pad) 80px; max-width:var(--wrap); margin:0 auto;
-      display:grid; gap:36px; align-items:center;
-    }
-    .hero h1{ font-size:clamp(2.6rem,5vw,3.7rem); line-height:1.04; margin:0; letter-spacing:-.03em; }
-    .hero p{ max-width:620px; font-size:1.1rem; color:var(--text-muted); }
+        .nav-links a:hover {
+            color: var(--text);
+        }
 
-    .badge{
-      display:inline-flex; align-items:center; padding:6px 12px; border-radius:999px;
-      background:var(--accent-soft); color:var(--accent); font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
-    }
+        .hero {
+            padding: 120px 28px 80px;
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            gap: 36px;
+            align-items: center;
+        }
 
-    .cta-group{ display:flex; flex-wrap:wrap; gap:16px; padding-top:10px; }
-    .button{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:14px 22px; border-radius:999px; font-weight:600;
-      transition:transform .2s ease, box-shadow .2s ease;
-    }
-    .button-primary{ background:var(--accent); color:#0b1220; box-shadow:0 14px 30px rgba(56,189,248,.28); }
-    .button-primary:hover, .button-primary:focus-visible{ transform:translateY(-1px); box-shadow:0 18px 36px rgba(56,189,248,.33); }
-    .button-secondary{ border:1px solid var(--border); background:var(--card); color:var(--text); }
+        .hero h1 {
+            font-size: clamp(2.6rem, 5vw, 3.7rem);
+            line-height: 1.04;
+            margin: 0;
+            letter-spacing: -0.03em;
+        }
 
-    /* Sections */
-    .section-title{ max-width:var(--wrap); margin:0 auto 36px; padding:0 var(--pad); }
-    .section-title h2{ margin:0 0 12px; font-size:clamp(2rem,4vw,2.8rem); letter-spacing:-.02em; }
-    .section-title p{ margin:0; color:var(--text-muted); max-width:680px; }
+        .hero p {
+            max-width: 620px;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
 
-    .grid{ display:grid; gap:24px; margin:80px auto 100px; padding:0 var(--pad); max-width:var(--wrap); }
-    .features{ grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+        .cta-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-top: 10px;
+        }
 
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:28px; box-shadow:var(--shadow); }
-    .card h3{ margin-top:0; font-size:1.2rem; letter-spacing:-.01em; }
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 22px;
+            border-radius: 999px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
 
-    .steps{ position:relative; padding-left:18px; }
-    .steps::before{
-      content:""; position:absolute; left:5px; top:8px; bottom:8px; width:2px;
-      background:linear-gradient(to bottom, rgba(56,189,248,0), rgba(56,189,248,.6), rgba(56,189,248,0));
-    }
-    .step{ position:relative; margin-bottom:28px; padding-left:22px; }
-    .step::before{
-      content:""; position:absolute; left:-4px; top:4px; width:12px; height:12px; border-radius:50%;
-      background:var(--accent); box-shadow:0 0 0 6px rgba(56,189,248,.16);
-    }
-    .step strong{ display:inline-block; margin-bottom:6px; font-size:1rem; }
+        .button-primary {
+            background: var(--accent);
+            color: #0b1220;
+            box-shadow: 0 14px 30px rgba(56, 189, 248, 0.28);
+        }
 
-    .cta-strip{
-      margin:80px auto 120px; max-width:960px; padding:42px 36px;
-      background: radial-gradient(circle at top right, rgba(56,189,248,.3), rgba(56,189,248,0)) var(--bg-soft);
-      border-radius:22px; border:1px solid rgba(56,189,248,.35); text-align:center; box-shadow:var(--shadow);
-    }
-    .cta-strip h2{ margin:0 0 12px; font-size:clamp(1.9rem, 4vw, 2.5rem); }
-    .cta-strip p{ margin:0 0 28px; color:var(--text-muted); }
+        .button-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px rgba(56, 189, 248, 0.33);
+        }
 
-    footer{
-      background:rgba(10,15,30,.85); border-top:1px solid rgba(148,163,184,.15);
-      padding:36px var(--pad) 48px;
-    }
-    footer .footer-content{
-      max-width:var(--wrap); margin:0 auto; display:flex; flex-wrap:wrap; gap:18px;
-      color:var(--text-muted); font-size:.85rem;
-    }
+        .button-secondary {
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+        }
 
-    /* Focus visibility */
-    :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:10px; }
+        .grid {
+            display: grid;
+            gap: 24px;
+            margin: 80px auto 100px;
+            padding: 0 28px;
+            max-width: 1100px;
+        }
 
-    @media (max-width:720px){
-      .nav-links{ display:none; }
-      .hero{ padding-top:100px; }
-      .cta-strip{ padding:36px 24px; }
-    }
-    @media (prefers-reduced-motion: reduce){
-      html{ scroll-behavior:auto; }
-      .button, .button-primary{ transition:none; }
-      .button-primary:hover, .button-primary:focus-visible{ transform:none; box-shadow:none; }
-    }
-  </style>
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            letter-spacing: -0.01em;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .section-title {
+            max-width: 1100px;
+            margin: 0 auto 36px;
+            padding: 0 28px;
+        }
+
+        .section-title h2 {
+            margin: 0 0 12px;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            letter-spacing: -0.02em;
+        }
+
+        .section-title p {
+            margin: 0;
+            color: var(--text-muted);
+            max-width: 680px;
+        }
+
+        .features {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .steps {
+            position: relative;
+            padding-left: 18px;
+        }
+
+        .steps::before {
+            content: "";
+            position: absolute;
+            left: 5px;
+            top: 8px;
+            bottom: 8px;
+            width: 2px;
+            background: linear-gradient(to bottom, rgba(56, 189, 248, 0), rgba(56, 189, 248, 0.6), rgba(56, 189, 248, 0));
+        }
+
+        .step {
+            position: relative;
+            margin-bottom: 28px;
+            padding-left: 22px;
+        }
+
+        .step::before {
+            content: "";
+            position: absolute;
+            left: -4px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.16);
+        }
+
+        .step strong {
+            display: inline-block;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }
+
+        .cta-strip {
+            margin: 80px auto 120px;
+            max-width: 960px;
+            padding: 42px 36px;
+            background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.3), rgba(56, 189, 248, 0)) var(--bg-soft);
+            border-radius: 22px;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .cta-strip h2 {
+            margin: 0 0 12px;
+            font-size: clamp(1.9rem, 4vw, 2.5rem);
+        }
+
+        .cta-strip p {
+            margin: 0 0 28px;
+            color: var(--text-muted);
+        }
+
+        footer {
+            background: rgba(10, 15, 30, 0.85);
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+            padding: 36px 28px 48px;
+        }
+
+        footer .footer-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 720px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding-top: 100px;
+            }
+
+            .cta-strip {
+                padding: 36px 24px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Preskoči na sadržaj</a>
+    <header>
+        <nav class="nav">
+            <a class="nav-brand" href="#top">Percules</a>
+            <div class="nav-links">
+                <a href="#koncept">Koncept</a>
+                <a href="#karakter">Karakter</a>
+                <a href="#mogucnosti">Mogućnosti</a>
+                <a href="#roadmap">Roadmap</a>
+                <a href="#kontakt">Kontakt</a>
+            </div>
+        </nav>
+    </header>
 
-  <header>
-    <nav class="nav" aria-label="Glavna navigacija">
-      <a class="nav-brand" href="#top">Percules</a>
-      <div class="nav-links">
-        <a href="#koncept">Koncept</a>
-        <a href="#karakter">Karakter</a>
-        <a href="#mogucnosti">Mogućnosti</a>
-        <a href="#roadmap">Roadmap</a>
-        <a href="#kontakt">Kontakt</a>
-      </div>
-    </nav>
-  </header>
+    <main id="top">
+        <section class="hero" id="koncept">
+            <div>
+                <span class="badge">Eksperiment u toku</span>
+                <h1>Percules je moj digitalni dvojnik – AI agent koji razmišlja kao ja.</h1>
+                <p>
+                    Umesto generičnog asistenta, Percules preuzima moj ton, način donošenja odluka i stav prema poslu.
+                    Ovo je javni dnevnik razvoja: od mapiranja mog identiteta do buduće pomoći ljudima koji dele iste izazove.
+                </p>
+                <div class="cta-group">
+                    <a class="button button-primary" href="mailto:hello@percules.pro">Predloži scenario</a>
+                    <a class="button button-secondary" href="#roadmap">Pogledaj plan razvoja</a>
+                </div>
+            </div>
+        </section>
 
-  <main id="main">
-    <section class="hero anchor" id="koncept">
-      <div>
-        <span class="badge">Eksperiment u toku</span>
-        <h1>Percules je moj digitalni dvojnik – AI agent koji razmišlja kao ja.</h1>
-        <p>Umesto generičnog asistenta, Percules preuzima moj ton, način donošenja odluka i stav prema poslu.
-          Ovo je javni dnevnik razvoja: od mapiranja mog identiteta do buduće pomoći ljudima koji dele iste izazove.</p>
-        <div class="cta-group">
-          <a class="button button-primary" href="mailto:hello@percules.pro">Predloži scenario</a>
-          <a class="button button-secondary" href="#roadmap">Pogledaj plan razvoja</a>
+        <section id="karakter">
+            <div class="section-title">
+                <h2>Šta znači „Percules priča kao ja“</h2>
+                <p>
+                    Agent uči iz razgovora, prethodnih odluka i mojih bilješki. Cilj je da očuva autentičan glas, a ipak
+                    ostane transparentan da je u pitanju AI.
+                </p>
+            </div>
+            <div class="grid features">
+                <article class="card">
+                    <h3>Tonalitet i vrednosti</h3>
+                    <p>Kombinuje ozbiljnost u poslu i direktan stil komunikacije, bez praznih fraza i marketinga.</p>
+                </article>
+                <article class="card">
+                    <h3>Memorija konteksta</h3>
+                    <p>Čuva ključne odluke, šta sam već probao i koje principe sledim kako bi odgovori bili dosledni.</p>
+                </article>
+                <article class="card">
+                    <h3>Granica transparentnosti</h3>
+                    <p>Svaki odgovor naglašava da govori AI verzija mene – Percules ne imitira ljudski identitet u tajnosti.</p>
+                </article>
+                <article class="card">
+                    <h3>Otvorena dokumentacija</h3>
+                    <p>Belježim promene javno. Ko želi da napravi svog agenta, može da prati korake i izbegne moje greške.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="mogucnosti">
+            <div class="section-title">
+                <h2>Prve funkcije koje razvijam</h2>
+                <p>Fokus je na praktičnim situacijama koje svakodnevno rešavam. Percules je za sada u „demo“ režimu.</p>
+            </div>
+            <div class="grid features">
+                <article class="card">
+                    <h3>Razgovori 1-na-1</h3>
+                    <p>Trening na mojoj korespondenciji da agent može da odgovori na često postavljena pitanja umesto mene.</p>
+                </article>
+                <article class="card">
+                    <h3>Rezime odluka</h3>
+                    <p>Automatsko zapisivanje šta je odlučeno, sa argumentima i alternativama koje sam razmatrao.</p>
+                </article>
+                <article class="card">
+                    <h3>Mini task upravljanje</h3>
+                    <p>Percules generiše naredne korake nakon razgovora i ubacuje ih u moj sistem zadataka.</p>
+                </article>
+                <article class="card">
+                    <h3>Znanje o meni</h3>
+                    <p>Personalni FAQ: šta radim, s kim sarađujem, kojim principima vodim projekat i gde su mi granice.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="roadmap">
+            <div class="section-title">
+                <h2>Roadmap razvoja</h2>
+                <p>Plan se menja kako se uči. Svaka faza donosi novi sloj odgovornosti i jasno definisane granice.</p>
+            </div>
+            <div class="grid">
+                <div class="card steps">
+                    <div class="step">
+                        <strong>Faza 1 · Digitalni ja</strong>
+                        <p>Prikupljanje materijala, modelovanje stila komunikacije i testiranje kako Percules vodi privatne razgovore.</p>
+                    </div>
+                    <div class="step">
+                        <strong>Faza 2 · Mentor za saradnike</strong>
+                        <p>Agent pomaže ljudima koji rade sa mnom: objašnjava procese, daje kontekst i predlaže rešenja po mom obrascu.</p>
+                    </div>
+                    <div class="step">
+                        <strong>Faza 3 · Otvorena asistencija</strong>
+                        <p>Percules postaje javan sagovornik svima koji žele savet ili pogled iz mog ugla, uz jasna pravila upotrebe.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-strip" id="kontakt">
+            <h2>Želiš da testiraš Perculesa ili da napraviš svog agenta?</h2>
+            <p>
+                Piši mi šta bi voleo da agent zna ili uradi. Svaki scenario pomaže da Percules postane bolji i korisniji.
+            </p>
+            <a class="button button-primary" href="mailto:hello@percules.pro">hello@percules.pro</a>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <span>© <span id="year"></span> Percules. Eksperiment je otvoren.</span>
+            <span>Verzija projekta: demo-public </span>
+            <span>Prati napredak – novi log uskoro.</span>
         </div>
-      </div>
-    </section>
+    </footer>
 
-    <section class="anchor" id="karakter">
-      <div class="section-title">
-        <h2>Šta znači „Percules priča kao ja“</h2>
-        <p>Agent uči iz razgovora, prethodnih odluka i mojih beležaka. Cilj je da očuva autentičan glas, a ipak
-          ostane transparentan da je u pitanju AI.</p>
-      </div>
-      <div class="grid features">
-        <article class="card">
-          <h3>Tonalitet i vrednosti</h3>
-          <p>Kombinuje ozbiljnost u poslu i direktan stil komunikacije, bez praznih fraza i marketinga.</p>
-        </article>
-        <article class="card">
-          <h3>Memorija konteksta</h3>
-          <p>Čuva ključne odluke, šta sam već probao i koje principe sledim kako bi odgovori bili dosledni.</p>
-        </article>
-        <article class="card">
-          <h3>Granica transparentnosti</h3>
-          <p>Svaki odgovor naglašava da govori AI verzija mene – Percules ne imitira ljudski identitet u tajnosti.</p>
-        </article>
-        <article class="card">
-          <h3>Otvorena dokumentacija</h3>
-          <p>Beležim promene javno. Ko želi da napravi svog agenta, može da prati korake i izbegne moje greške.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="anchor" id="mogucnosti">
-      <div class="section-title">
-        <h2>Prve funkcije koje razvijam</h2>
-        <p>Fokus je na praktičnim situacijama koje svakodnevno rešavam. Percules je za sada u „demo“ režimu.</p>
-      </div>
-      <div class="grid features">
-        <article class="card">
-          <h3>Razgovori 1-na-1</h3>
-          <p>Trening na mojoj korespondenciji da agent može da odgovori na često postavljena pitanja umesto mene.</p>
-        </article>
-        <article class="card">
-          <h3>Rezime odluka</h3>
-          <p>Automatsko zapisivanje šta je odlučeno, sa argumentima i alternativama koje sam razmatrao.</p>
-        </article>
-        <article class="card">
-          <h3>Mini task upravljanje</h3>
-          <p>Percules generiše naredne korake nakon razgovora i ubacuje ih u moj sistem zadataka.</p>
-        </article>
-        <article class="card">
-          <h3>Znanje o meni</h3>
-          <p>Personalni FAQ: šta radim, s kim sarađujem, kojim principima vodim projekat i gde su mi granice.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="anchor" id="roadmap">
-      <div class="section-title">
-        <h2>Roadmap razvoja</h2>
-        <p>Plan se menja kako se uči. Svaka faza donosi novi sloj odgovornosti i jasno definisane granice.</p>
-      </div>
-      <div class="grid">
-        <div class="card steps">
-          <div class="step">
-            <strong>Faza 1 · Digitalni ja</strong>
-            <p>Prikupljanje materijala, modelovanje stila komunikacije i testiranje kako Percules vodi privatne razgovore.</p>
-          </div>
-          <div class="step">
-            <strong>Faza 2 · Mentor za saradnike</strong>
-            <p>Agent pomaže ljudima koji rade sa mnom: objašnjava procese, daje kontekst i predlaže rešenja po mom obrascu.</p>
-          </div>
-          <div class="step">
-            <strong>Faza 3 · Otvorena asistencija</strong>
-            <p>Percules postaje javan sagovornik svima koji žele savet ili pogled iz mog ugla, uz jasna pravila upotrebe.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="cta-strip anchor" id="kontakt">
-      <h2>Želiš da testiraš Perculesa ili da napraviš svog agenta?</h2>
-      <p>Piši mi šta bi voleo da agent zna ili uradi. Svaki scenario pomaže da Perc
+    <script>
+        document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>
