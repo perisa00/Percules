@@ -59,9 +59,19 @@
         }
 
         .nav-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
             font-weight: 700;
             letter-spacing: -0.02em;
             font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        .nav-brand img {
+            height: 36px;
+            width: auto;
+            display: block;
         }
 
         .nav-actions {
@@ -326,7 +336,10 @@
 <body>
     <header>
         <nav class="nav">
-            <a class="nav-brand" href="#top">Percules</a>
+            <a class="nav-brand" href="#top">
+            <img src="~/images/percules-logo.png" alt="Percules logo" />
+            <span>Percules</span>
+        </a>
             <div class="nav-actions">
                 <div class="nav-links" role="navigation" aria-label="Primary">
                     <a href="#koncept" data-i18n="navConcept">Koncept</a>
@@ -597,3 +610,5 @@
     </script>
 </body>
 </html>
+
+
