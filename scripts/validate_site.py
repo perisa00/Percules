@@ -21,6 +21,9 @@ EXPECTED_PHONE = "+381695312480"
 
 REQUIRED_FILES = (
     "public/index.html",
+    "public/ciscenje-laptopa-novi-sad.html",
+    "public/ugradnja-ssd-ram-laptop.html",
+    "public/prosuta-tecnost-po-laptopu.html",
     "public/privatnost.html",
     "public/uslovi-servisa.html",
     "public/404.html",
@@ -49,6 +52,9 @@ REQUIRED_FILES = (
 
 CANONICAL_URLS = {
     "index.html": "https://percules.rs/",
+    "ciscenje-laptopa-novi-sad.html": "https://percules.rs/ciscenje-laptopa-novi-sad.html",
+    "ugradnja-ssd-ram-laptop.html": "https://percules.rs/ugradnja-ssd-ram-laptop.html",
+    "prosuta-tecnost-po-laptopu.html": "https://percules.rs/prosuta-tecnost-po-laptopu.html",
     "privatnost.html": "https://percules.rs/privatnost.html",
     "uslovi-servisa.html": "https://percules.rs/uslovi-servisa.html",
     "404.html": "https://percules.rs/404.html",
@@ -56,6 +62,9 @@ CANONICAL_URLS = {
 
 EXPECTED_SITEMAP_URLS = {
     "https://percules.rs/",
+    "https://percules.rs/ciscenje-laptopa-novi-sad.html",
+    "https://percules.rs/ugradnja-ssd-ram-laptop.html",
+    "https://percules.rs/prosuta-tecnost-po-laptopu.html",
     "https://percules.rs/privatnost.html",
     "https://percules.rs/uslovi-servisa.html",
 }

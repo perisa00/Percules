@@ -26,21 +26,50 @@
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "WebSite",
+        "@id": "https://percules.rs/#website",
+        "url": "https://percules.rs/",
+        "name": "Percules",
+        "alternateName": "Percules servis laptopova Novi Sad",
+        "inLanguage": "sr-Latn-RS",
+        "publisher": {"@id": "https://percules.rs/#business"}
+      },
+      {
         "@type": "LocalBusiness",
         "@id": "https://percules.rs/#business",
         "name": "Percules",
         "url": "https://percules.rs/",
+        "logo": "https://percules.rs/assets/brand/icon-512.png",
+        "image": "https://percules.rs/assets/brand/og-image.png",
         "telephone": "+381695312480",
         "email": "aleksa.perisic2000@gmail.com",
-        "areaServed": "Novi Sad i okolina",
-        "description": "Servis, dijagnostika, održavanje i nadogradnja laptopova za privatne korisnike i male firme."
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Novi Sad",
+          "addressRegion": "Vojvodina",
+          "addressCountry": "RS"
+        },
+        "areaServed": {"@type": "City", "name": "Novi Sad"},
+        "description": "Servis, dijagnostika, čišćenje, održavanje i nadogradnja laptopova za privatne korisnike i male firme u Novom Sadu.",
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Usluge servisa laptopova",
+          "itemListElement": [
+            {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Dijagnostika laptopa"}},
+            {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Čišćenje i održavanje laptopa"}},
+            {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Ugradnja SSD-a i RAM memorije"}},
+            {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Zamena delova laptopa"}},
+            {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Instalacija i podešavanje sistema"}}
+          ]
+        }
       },
       {
         "@type": "Service",
         "@id": "https://percules.rs/#service",
-        "name": "Servis laptopova",
+        "name": "Servis laptopova u Novom Sadu",
+        "serviceType": ["Dijagnostika laptopa", "Čišćenje laptopa", "Nadogradnja SSD-a i RAM-a", "Zamena delova laptopa"],
         "provider": {"@id": "https://percules.rs/#business"},
-        "areaServed": "Novi Sad i okolina",
+        "areaServed": {"@type": "City", "name": "Novi Sad"},
         "description": "Dijagnostika, čišćenje, održavanje, nadogradnja i zamena delova laptopova."
       },
       {
@@ -372,6 +401,38 @@
       </div>
     </section>
 
+    <section class="section section-light" id="vodici" aria-labelledby="vodici-title">
+      <div class="container">
+        <div class="section-heading split-heading">
+          <div>
+            <p class="section-kicker">Korisni vodiči</p>
+            <h2 id="vodici-title">Pomoć za najčešće probleme sa laptopom</h2>
+          </div>
+          <p>Pročitajte šta možete bezbedno da proverite pre dolaska, kako izgleda servis i koje informacije pomažu pri početnoj proceni.</p>
+        </div>
+        <div class="service-grid">
+          <article class="service-card">
+            <span class="service-number">V01</span>
+            <h3>Čišćenje laptopa u Novom Sadu</h3>
+            <p>Znaci pregrevanja, šta obuhvata održavanje sistema hlađenja i kako izgleda završno testiranje.</p>
+            <a class="text-link" href="ciscenje-laptopa-novi-sad.html">Vodič za čišćenje laptopa <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="service-card">
+            <span class="service-number">V02</span>
+            <h3>Ugradnja SSD-a i RAM-a</h3>
+            <p>Kada nadogradnja ima smisla, kako se proverava kompatibilnost i šta treba znati o prenosu podataka.</p>
+            <a class="text-link" href="ugradnja-ssd-ram-laptop.html">Vodič za SSD i RAM <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="service-card">
+            <span class="service-number">V03</span>
+            <h3>Prosuta tečnost po laptopu</h3>
+            <p>Prvi koraci koji smanjuju dodatni rizik i postupci koje treba izbegavati pre pregleda uređaja.</p>
+            <a class="text-link" href="prosuta-tecnost-po-laptopu.html">Hitno uputstvo <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section class="section section-light" id="faq" aria-labelledby="faq-title">
       <div class="container faq-grid">
         <div class="section-heading faq-heading">
@@ -556,6 +617,7 @@
       </div>
       <div>
         <h2 class="footer-title">Informacije</h2>
+        <a href="#vodici">Korisni vodiči</a>
         <a href="privatnost.html">Privatnost</a>
         <a href="uslovi-servisa.html">Uslovi servisa</a>
       </div>
