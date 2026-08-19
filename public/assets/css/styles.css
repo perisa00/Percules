@@ -269,6 +269,8 @@ select:focus-visible {
 
 .brand img {
   flex: 0 0 auto;
+  filter: drop-shadow(0 0.3rem 0.6rem rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 0.45rem rgba(19, 184, 212, 0.18));
 }
 
 .site-nav {
@@ -554,55 +556,40 @@ select:focus-visible {
 
 .hero-visual {
   position: relative;
-  padding: clamp(1rem, 3vw, 2.25rem);
-  border: 1px solid #274558;
-  background: #0b1c28;
-  box-shadow: 1.25rem 1.25rem 0 rgba(19, 184, 212, 0.08);
+  isolation: isolate;
+  display: grid;
+  padding: clamp(0.25rem, 1.5vw, 1rem);
+  place-items: center;
 }
 
-.hero-visual::before,
-.hero-visual::after {
-  position: absolute;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-color: var(--color-blue-bright);
-  content: "";
+.hero-logo {
+  width: min(100%, 39rem);
+  height: auto;
+  filter: drop-shadow(0 1.8rem 2.1rem rgba(0, 0, 0, 0.46))
+    drop-shadow(0 0 1.65rem rgba(19, 184, 212, 0.17));
 }
 
 .hero-visual::before {
-  top: -1px;
-  left: -1px;
-  border-top: 3px solid;
-  border-left: 3px solid;
+  position: absolute;
+  z-index: -1;
+  inset: 7% -3% 10% 2%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(19, 184, 212, 0.2), rgba(15, 83, 133, 0.1) 42%, transparent 70%);
+  filter: blur(1rem);
+  content: "";
 }
 
 .hero-visual::after {
-  right: -1px;
-  bottom: -1px;
-  border-right: 3px solid;
-  border-bottom: 3px solid;
-}
-
-.visual-label {
   position: absolute;
-  z-index: 2;
-  background: var(--color-blue-bright);
-  color: var(--color-ink);
-  padding: 0.4rem 0.65rem;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-}
-
-.visual-label-top {
-  top: -0.8rem;
-  right: 1.5rem;
-}
-
-.visual-label-bottom {
-  bottom: -0.8rem;
-  left: 1.5rem;
+  z-index: -1;
+  right: 12%;
+  bottom: 3%;
+  left: 12%;
+  height: 8%;
+  border-radius: 50%;
+  background: rgba(19, 184, 212, 0.18);
+  filter: blur(1.4rem);
+  content: "";
 }
 
 /* 8. Cards i usluge */
@@ -1789,11 +1776,7 @@ input[type="checkbox"] {
   }
 
   .hero-visual {
-    padding: 0.5rem;
-  }
-
-  .visual-label {
-    font-size: 0.56rem;
+    padding: 0;
   }
 }
 
