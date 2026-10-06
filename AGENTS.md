@@ -1,6 +1,6 @@
 # Percules — trajna pravila projekta
 
-- Projekat je zvanični statički sajt Percules laptop servisa.
+- Projekat je zvanični statički sajt Percules Digital Studio, trenutno interaktivni prikaz galaksije.
 - Produkcioni domen je `percules.rs`.
 - Primarni jezik je srpski, latinica sa pravilnim dijakritičkim znacima.
 - Ne izmišljati cene, recenzije, sertifikate, garancije, adrese ili poslovne rezultate.
