@@ -1,0 +1,316 @@
+{
+  "title": "Solar System Scope planetary textures, optimized for this visualization",
+  "creator": "Solar System Scope / INOVE",
+  "sourcePage": "https://www.solarsystemscope.com/textures/",
+  "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Planetary textures by Solar System Scope / INOVE, based on NASA imagery, licensed under CC BY 4.0. Textures resized and compressed to WebP for this visualization.",
+  "changes": "Only Lanczos resizing and lossy WebP compression were applied; no new imagery was created. Preview maps are 256x128 at quality 82. Sun, Earth day, Mars, Jupiter and Saturn maps retain 2048x1024; the remaining maps are resized to 1024x512. Main maps use quality 86 and WebP method 6. Source JPEG downloads are preserved.",
+  "sourceDisclosure": "The publisher describes the maps as equirectangular and based on NASA elevation and imagery. Colors were tuned against spacecraft and telescope images and made slightly more saturated. Some unmapped areas were filled with plausible fictional terrain by the publisher. Earth maps combine geographic and NASA Blue Marble data and show a season with abundant vegetation and less snow.",
+  "cloudsDisclosure": "The official 2k Earth clouds download is JPEG and provides no transparency channel. The output retains the supplied RGB imagery; it can be used as a cloud luminance/alpha mask by the rendering application.",
+  "assets": [
+    {
+      "id": "sun",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_sun.jpg",
+      "sourceFile": "sources/2k_sun.jpg",
+      "sourceBytes": 822427,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "sun-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 10182,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "sun.webp",
+          "width": 2048,
+          "height": 1024,
+          "bytes": 274770,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "mercury",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_mercury.jpg",
+      "sourceFile": "sources/2k_mercury.jpg",
+      "sourceBytes": 872555,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "mercury-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 5338,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "mercury.webp",
+          "width": 1024,
+          "height": 512,
+          "bytes": 114016,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "venus",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_venus_atmosphere.jpg",
+      "sourceFile": "sources/2k_venus_atmosphere.jpg",
+      "sourceBytes": 229696,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "venus-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 1972,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "venus.webp",
+          "width": 1024,
+          "height": 512,
+          "bytes": 15926,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "earth",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_earth_daymap.jpg",
+      "sourceFile": "sources/2k_earth_daymap.jpg",
+      "sourceBytes": 463087,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "earth-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 5282,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "earth.webp",
+          "width": 2048,
+          "height": 1024,
+          "bytes": 163552,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "mars",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_mars.jpg",
+      "sourceFile": "sources/2k_mars.jpg",
+      "sourceBytes": 750547,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "mars-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 5584,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "mars.webp",
+          "width": 2048,
+          "height": 1024,
+          "bytes": 271350,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "jupiter",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_jupiter.jpg",
+      "sourceFile": "sources/2k_jupiter.jpg",
+      "sourceBytes": 498976,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "jupiter-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 3664,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "jupiter.webp",
+          "width": 2048,
+          "height": 1024,
+          "bytes": 146344,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "saturn",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_saturn.jpg",
+      "sourceFile": "sources/2k_saturn.jpg",
+      "sourceBytes": 199916,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "saturn-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 1074,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "saturn.webp",
+          "width": 2048,
+          "height": 1024,
+          "bytes": 40396,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "uranus",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_uranus.jpg",
+      "sourceFile": "sources/2k_uranus.jpg",
+      "sourceBytes": 77751,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "uranus-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 304,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "uranus.webp",
+          "width": 1024,
+          "height": 512,
+          "bytes": 3106,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "neptune",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_neptune.jpg",
+      "sourceFile": "sources/2k_neptune.jpg",
+      "sourceBytes": 241580,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "neptune-low.webp",
+          "width": 256,
+          "height": 128,
+          "bytes": 762,
+          "hasAlpha": false,
+          "webpQuality": 82
+        },
+        {
+          "file": "neptune.webp",
+          "width": 1024,
+          "height": 512,
+          "bytes": 6426,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "earth-night",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_earth_nightmap.jpg",
+      "sourceFile": "sources/2k_earth_nightmap.jpg",
+      "sourceBytes": 255287,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "earth-night.webp",
+          "width": 1024,
+          "height": 512,
+          "bytes": 21138,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    },
+    {
+      "id": "earth-clouds",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/download/2k_earth_clouds.jpg",
+      "sourceFile": "sources/2k_earth_clouds.jpg",
+      "sourceBytes": 965676,
+      "sourceDimensions": [
+        2048,
+        1024
+      ],
+      "sourceHasAlpha": false,
+      "outputs": [
+        {
+          "file": "earth-clouds.webp",
+          "width": 1024,
+          "height": 512,
+          "bytes": 153640,
+          "hasAlpha": false,
+          "webpQuality": 86
+        }
+      ]
+    }
+  ]
+}

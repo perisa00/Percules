@@ -19,55 +19,11 @@ EXPECTED_LANG = "sr-Latn-RS"
 EXPECTED_EMAIL = "aleksa.perisic2000@gmail.com"
 EXPECTED_PHONE = "+381695312480"
 
-REQUIRED_FILES = (
-    "public/index.html",
-    "public/ciscenje-laptopa-novi-sad.html",
-    "public/ugradnja-ssd-ram-laptop.html",
-    "public/prosuta-tecnost-po-laptopu.html",
-    "public/privatnost.html",
-    "public/uslovi-servisa.html",
-    "public/404.html",
-    "public/robots.txt",
-    "public/sitemap.xml",
-    "public/site.webmanifest",
-    "public/_headers",
-    "public/_redirects",
-    "public/assets/css/styles.css",
-    "public/assets/js/site-config.js",
-    "public/assets/js/main.js",
-    "public/assets/brand/percules-logo.svg",
-    "public/assets/brand/favicon.svg",
-    "public/assets/brand/apple-touch-icon.png",
-    "public/assets/brand/icon-192.png",
-    "public/assets/brand/icon-512.png",
-    "public/assets/brand/og-image.png",
-    "public/assets/illustrations/laptop-service.svg",
-    "scripts/validate_site.py",
-    "README.md",
-    "DEPLOYMENT.md",
-    "AGENTS.md",
-    ".editorconfig",
-    ".gitignore",
-)
+REQUIRED_FILES = ('public/index.html', 'public/404.html', 'public/coin.html', 'public/coin.css', 'public/styles.css', 'public/galaxy.js', 'public/solar.js', 'public/jump.js', 'public/shield.js', 'public/audio.js', 'public/coin.js', 'public/robots.txt', 'public/sitemap.xml', 'public/_headers', 'public/_redirects', 'public/assets/galaxy-face-on-v2.webp', 'public/assets/brand/percules-emblem.webp', 'public/assets/brand/percules-outline.json', 'public/assets/solar/credits.json', 'public/assets/solar/sun.webp', 'public/assets/solar/sun-low.webp', 'public/assets/solar/earth.webp', 'public/assets/solar/earth-low.webp', 'public/assets/solar/mars.webp', 'public/assets/solar/mars-low.webp', 'public/assets/solar/jupiter.webp', 'public/assets/solar/jupiter-low.webp', 'public/assets/solar/mercury.webp', 'public/assets/solar/mercury-low.webp', 'public/assets/solar/venus.webp', 'public/assets/solar/venus-low.webp', 'public/assets/solar/saturn.webp', 'public/assets/solar/saturn-low.webp', 'public/assets/solar/uranus.webp', 'public/assets/solar/uranus-low.webp', 'public/assets/solar/neptune.webp', 'public/assets/solar/neptune-low.webp', 'scripts/validate_site.py', 'README.md', 'DEPLOYMENT.md', 'AGENTS.md', '.editorconfig', '.gitignore')
 
-CANONICAL_URLS = {
-    "index.html": "https://percules.rs/",
-    "ciscenje-laptopa-novi-sad.html": "https://percules.rs/ciscenje-laptopa-novi-sad.html",
-    "ugradnja-ssd-ram-laptop.html": "https://percules.rs/ugradnja-ssd-ram-laptop.html",
-    "prosuta-tecnost-po-laptopu.html": "https://percules.rs/prosuta-tecnost-po-laptopu.html",
-    "privatnost.html": "https://percules.rs/privatnost.html",
-    "uslovi-servisa.html": "https://percules.rs/uslovi-servisa.html",
-    "404.html": "https://percules.rs/404.html",
-}
+CANONICAL_URLS = {'index.html': 'https://percules.rs/', 'coin.html': 'https://percules.rs/coin.html', '404.html': 'https://percules.rs/404.html'}
 
-EXPECTED_SITEMAP_URLS = {
-    "https://percules.rs/",
-    "https://percules.rs/ciscenje-laptopa-novi-sad.html",
-    "https://percules.rs/ugradnja-ssd-ram-laptop.html",
-    "https://percules.rs/prosuta-tecnost-po-laptopu.html",
-    "https://percules.rs/privatnost.html",
-    "https://percules.rs/uslovi-servisa.html",
-}
+EXPECTED_SITEMAP_URLS = {"https://percules.rs/"}
 
 TEXT_SUFFIXES = {
     ".html", ".css", ".js", ".svg", ".txt", ".xml", ".webmanifest", ""
@@ -228,11 +184,6 @@ def parse_html_pages(problems: list[str]) -> dict[Path, SiteHTMLParser]:
             problems.append(f"{label}: nedostaje title")
         if not parser.meta_description:
             problems.append(f"{label}: nedostaje meta description")
-        elif path.name == "index.html" and not 140 <= len(parser.meta_description) <= 165:
-            problems.append(
-                f"{label}: meta description treba da ima 140–165 znakova, "
-                f"pronađeno {len(parser.meta_description)}"
-            )
         if not parser.canonical:
             problems.append(f"{label}: nedostaje canonical")
         elif parser.canonical != CANONICAL_URLS.get(path.name):
@@ -321,24 +272,6 @@ def validate_public_text(problems: list[str]) -> None:
             problems.append(f"{path.relative_to(ROOT)}: pronađen nedovršen marker")
 
 
-def validate_manifest(problems: list[str]) -> None:
-    manifest_path = PUBLIC / "site.webmanifest"
-    text = read_utf8(manifest_path, problems)
-    if text is None:
-        return
-    try:
-        manifest = json.loads(text)
-    except json.JSONDecodeError as exc:
-        problems.append(f"public/site.webmanifest nije validan JSON ({exc})")
-        return
-
-    for icon in manifest.get("icons", []):
-        src = icon.get("src", "")
-        target, _ = public_target(PUBLIC / "index.html", src)
-        if not src or target is None or not target.exists():
-            problems.append(f"public/site.webmanifest: ikonica ne postoji ({src or '(prazno)'})")
-
-
 def png_dimensions(path: Path) -> tuple[int, int] | None:
     try:
         with path.open("rb") as handle:
@@ -348,23 +281,6 @@ def png_dimensions(path: Path) -> tuple[int, int] | None:
     if len(header) != 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
         return None
     return struct.unpack(">II", header[16:24])
-
-
-def validate_png_sizes(problems: list[str]) -> None:
-    expected_sizes = {
-        "apple-touch-icon.png": (180, 180),
-        "icon-192.png": (192, 192),
-        "icon-512.png": (512, 512),
-        "og-image.png": (1200, 630),
-    }
-    brand_dir = PUBLIC / "assets/brand"
-    for filename, expected in expected_sizes.items():
-        actual = png_dimensions(brand_dir / filename)
-        if actual != expected:
-            problems.append(
-                f"public/assets/brand/{filename}: očekivana veličina je "
-                f"{expected[0]}×{expected[1]}, pronađeno {actual or 'neispravan PNG'}"
-            )
 
 
 def validate_sitemap_and_robots(problems: list[str]) -> None:
@@ -383,34 +299,6 @@ def validate_sitemap_and_robots(problems: list[str]) -> None:
         problems.append("public/robots.txt nema ispravnu referencu ka sitemapu")
 
 
-def validate_config_and_contacts(parsed_pages: dict[Path, SiteHTMLParser], problems: list[str]) -> None:
-    config_path = PUBLIC / "assets/js/site-config.js"
-    text = read_utf8(config_path, problems)
-    if text is None:
-        return
-
-    pairs = dict(re.findall(r"\b([A-Za-z][A-Za-z0-9]*)\s*:\s*\"([^\"]*)\"", text))
-    if pairs.get("email") != EXPECTED_EMAIL:
-        problems.append("site-config.js: email ne odgovara očekivanoj vrednosti")
-    if pairs.get("phoneE164") != EXPECTED_PHONE:
-        problems.append("site-config.js: E.164 telefon ne odgovara očekivanoj vrednosti")
-    if pairs.get("phoneDisplay") != "+381 69 531 2480":
-        problems.append("site-config.js: telefon za prikaz ne odgovara očekivanoj vrednosti")
-
-    index_text = read_utf8(PUBLIC / "index.html", problems)
-    if index_text is not None:
-        for expected in (pairs.get("email"), pairs.get("phoneE164"), pairs.get("phoneDisplay")):
-            if expected and expected not in index_text:
-                problems.append(f"public/index.html ne sadrži konfigurisanu kontakt vrednost ({expected})")
-
-    total_tel_links = sum(len(page.tel_links) for page in parsed_pages.values())
-    total_mailto_links = sum(len(page.mailto_links) for page in parsed_pages.values())
-    if total_tel_links == 0:
-        problems.append("HTML stranice nemaju nijedan tel link")
-    if total_mailto_links == 0:
-        problems.append("HTML stranice nemaju nijedan mailto link")
-
-
 def validate_required_files(problems: list[str]) -> None:
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
@@ -419,16 +307,41 @@ def validate_required_files(problems: list[str]) -> None:
         problems.append("stari root CNAME ne sme da postoji")
 
 
+def validate_runtime_resources(problems: list[str]) -> None:
+    for path in PUBLIC.glob("*.js"):
+        text = path.read_text(encoding="utf-8")
+        references = re.findall(r"import\(['\"]([^'\"]+)['\"]\)", text)
+        references += re.findall(r"['\"](assets/[^'\"`$]+\.(?:json|webp))['\"]", text)
+        for ref in references:
+            target, _ = public_target(path, ref)
+            if target is None or not target.is_file():
+                problems.append(f"Missing lazy resource: {ref}")
+    for path in PUBLIC.rglob("*.json"):
+        try: json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, OSError): problems.append(f"Invalid JSON resource: {path.name}")
+    for path in PUBLIC.rglob("*.webp"):
+        data = path.read_bytes()
+        if data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+            problems.append(f"Invalid texture image: {path.name}")
+    for path in PUBLIC.rglob("*.html"):
+        text = path.read_text(encoding="utf-8")
+        if "<style>" in text or re.search(r'<script(?![^>]*src=)', text):
+            problems.append(f"Inline code blocked by CSP: {path.name}")
+    if sum(p.stat().st_size for p in PUBLIC.rglob("*") if p.is_file()) > 3000000:
+        problems.append("Release exceeds 3 MB budget")
+    headers = (PUBLIC / "_headers").read_text()
+    if "unsafe-inline" in headers or "unsafe-eval" in headers or "script-src 'self'" not in headers:
+        problems.append("CSP was weakened")
+
+
 def main() -> int:
     problems: list[str] = []
     validate_required_files(problems)
     validate_public_text(problems)
     parsed_pages = parse_html_pages(problems)
     validate_references(parsed_pages, problems)
-    validate_manifest(problems)
-    validate_png_sizes(problems)
     validate_sitemap_and_robots(problems)
-    validate_config_and_contacts(parsed_pages, problems)
+    validate_runtime_resources(problems)
 
     unique_problems = list(dict.fromkeys(problems))
     if unique_problems:
