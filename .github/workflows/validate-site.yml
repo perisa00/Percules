@@ -4,6 +4,9 @@ on:
     branches: [codex/percules-studio-worlds]
   pull_request:
     branches: [main]
+concurrency:
+  group: percules-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -22,9 +25,18 @@ jobs:
         run: |
           for file in public/*.js; do node --input-type=module --check < "$file"; done
           node --check scripts/check_studio.cjs
+      - name: Check destinations, cameras, rendering and touch
+        run: node scripts/check_studio.cjs
       - name: Install shader compiler
+        timeout-minutes: 3
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y glslang-tools
-      - name: Check destinations, cameras, rendering and shaders
+          if ! command -v glslangValidator >/dev/null; then
+            if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+              sudo apt-get -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update -qq
+            else
+              sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update -qq
+            fi
+            sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends glslang-tools
+          fi
+      - name: Compile and link WebGL shaders
         run: node scripts/check_studio.cjs --shaders
