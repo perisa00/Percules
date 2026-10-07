@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   function layout(points,width,height){
-    const compact=width<=800,labelWidth=Math.min(compact?150:190,(width-52)/2);
+    const compact=width<=800,labelWidth=Math.min(compact?150:190,(width-52)/2)*.8;
     if(compact&&height>550)return points.map((p,i)=>{
       const row=i<4?Math.floor(i/2):2+Math.floor((i-4)/2);
       const y=[Math.max(142,height*.20),Math.max(198,height*.28),height*.68,Math.max(height*.76,height*.68+56)][row];

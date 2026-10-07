@@ -741,8 +741,8 @@
         const previous=labelPositions.get(point.id)||point,blend=motion.matches?1:1-Math.exp(-dt*12);
         const x=lerp(previous.labelX,point.labelX,blend),y=lerp(previous.labelY,point.labelY,blend);
         labelPositions.set(point.id,{labelX:x,labelY:y});
-        beacon.style.width=point.width+'px';beacon.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
-        const endX=point.side==='left'?x+point.width:x,endY=y+24,elbowX=endX+(point.side==='left'?18:-18);
+        beacon.dataset.side=point.side;beacon.style.width=point.width+'px';beacon.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
+        const endX=point.side==='left'?x+point.width:x,endY=y+22,elbowX=endX+(point.side==='left'?18:-18);
         line.setAttribute('d','M '+point.x.toFixed(1)+' '+point.y.toFixed(1)+' L '+elbowX.toFixed(1)+' '+endY.toFixed(1)+' L '+endX.toFixed(1)+' '+endY.toFixed(1));
         pin.setAttribute('cx',point.x.toFixed(1));pin.setAttribute('cy',point.y.toFixed(1));
       }
