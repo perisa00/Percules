@@ -26,40 +26,42 @@ Image:function(){throw Error('Procedural studio must not download planetary imag
 vm.createContext(context);
 vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,worlds,bodies};',context);
 const {createSolar,worlds}=context.api;
-assert.equal(worlds.studio.length,7);assert.equal(worlds.milica.length,2);
-assert.deepEqual(Array.from(worlds.studio,b=>b.name),['Percules','Sajtovi','Aplikacije','Podrška','Način rada','Projekti','Kontakt']);
-for(const list of Object.values(worlds)){
+assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,2);
+for(const [id,list] of Object.entries(worlds)){
+assert.equal(list.length,id==='milica'?2:1,'Each main destination must have its own world');
 assert.equal(new Set(list.map(b=>b.id)).size,list.length);
 for(const b of list){assert.ok(b.position.every(Number.isFinite));assert.ok(b.radius>0);}
 }
 const solar=createSolar(canvas,{onSelect:body=>selections.push(body?.id||null)});
 solar.size(390,844,1.25);
-assert.equal(labels.children.length,7);assert.equal(solar.worldId(),'studio');
-solar.select('venus');assert.equal(solar.focusId(),'venus');
+assert.equal(labels.children.length,1);assert.equal(solar.worldId(),'studio');
+solar.setWorld('contact');solar.select('venus');assert.equal(solar.focusId(),'venus');
 solar.select('invalid');assert.equal(solar.focusId(),'venus');
 for(const rate of [30,60,120]){
-solar.clearFocus();solar.camera({dt:1/rate,target:[0,0,0],distance:150,reducedMotion:true});
-solar.select('neptune');let camera;
+solar.setWorld('milica');solar.clearFocus();solar.camera({dt:1/rate,target:[0,0,0],distance:150,reducedMotion:true});
+solar.select('earth');let camera;
 for(let i=0;i<rate*3;i++)camera=solar.camera({dt:1/rate,target:[0,0,0],distance:150,reducedMotion:false});
 assert.ok(camera.target.every(Number.isFinite));assert.ok(camera.distance>0);
-const expected=worlds.studio.find(b=>b.id==='neptune').position;
+const expected=worlds.milica.find(b=>b.id==='earth').position;
 for(let i=0;i<3;i++)assert.ok(Math.abs(camera.target[i]-expected[i])<.001);
 assert.ok(Math.abs(camera.framing-.4)<.001);
 }
 solar.render({dt:1/60,yaw:.25,pitch:.73,roll:-.2,progress:1,reducedMotion:false,viewPrepared:true});
-assert.ok(draws.length>0);
-assert.equal(solar.setWorld('invalid'),false);
-assert.equal(solar.setWorld('milica'),true);assert.equal(solar.isFocused(),false);
+assert.ok(draws.length>0);assert.equal(solar.setWorld('invalid'),false);
+solar.setWorld('studio');assert.equal(solar.setWorld('milica'),true);assert.equal(solar.isFocused(),false);
 assert.equal(labels.children.length,2);assert.equal(canvas.dataset.world,'milica');
 solar.camera({dt:1/60,target:[0,0,0],distance:80,reducedMotion:true});
 solar.render({dt:1/60,yaw:.25,pitch:.73,progress:1,reducedMotion:true,viewPrepared:true});
 assert.equal(emblem.hidden,true);
 labels.children[1].listeners.click();assert.equal(solar.focusId(),'earth');
 solar.zoom(2500);assert.equal(solar.isFocused(),false);
-solar.setWorld('studio');assert.equal(labels.children.length,7);
-solar.select('jupiter');solar.render({dt:.016,yaw:.2,pitch:.32,progress:1,reducedMotion:false,viewPrepared:true});
+for(const region of ['studio','websites','apps','support','process','projects','contact']){
+solar.setWorld(region);assert.equal(labels.children.length,1);solar.select(worlds[region][0].id);
+solar.camera({dt:.016,target:[0,0,0],distance:80,reducedMotion:true});
+solar.render({dt:.016,yaw:-.65,pitch:.32,progress:1,reducedMotion:false,viewPrepared:true});
+}
 const html=fs.readFileSync('public/index.html','utf8');
-for(const body of worlds.studio)assert.ok(html.includes('data-content="'+body.id+'"'),body.id+' content missing');
+for(const body of Object.entries(worlds).filter(([id])=>id!=='milica').flatMap(([,list])=>list))assert.ok(html.includes('data-content="'+body.id+'"'),body.id+' content missing');
 assert.ok(html.includes('data-content="milica"'));
 assert.ok(html.includes('mailto:aleksa.perisic2000@gmail.com'));
 assert.ok(html.includes('tel:+381695312480'));
@@ -79,7 +81,7 @@ assert.equal(result.status,0,'Shader '+index+' failed:\n'+result.stdout+'\n'+res
 }
 console.log('Validated '+shaderPairs.length+' WebGL shader pairs.');
 }
-console.log('Studio checks passed: destinations, mobile camera at 30/60/120 FPS, both worlds, render paths, content and contact.');
+console.log('Studio checks passed: seven separate galactic worlds, pink system, mobile camera at 30/60/120 FPS, rendering, content and contact.');
 
 async function checkNavigation(reduced){
   let now=0,sequence=0;
@@ -87,7 +89,7 @@ async function checkNavigation(reduced){
   const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
   function node(id){
     if(nodes.has(id))return nodes.get(id);
-    const el=element();el.id=id;el.classList={add(){},remove(){}};el.focus=()=>{};
+    const el=element();el.id=id;const destination=Object.entries(context.PerculesDestinations||{}).find(([,d])=>d.marker===id);if(destination)el.dataset.world=destination[0];el.classList={add(){},remove(){}};el.focus=()=>{};
     el.getContext=type=>type==='2d'?ctx2d:null;el.removeAttribute=()=>{};el.setPointerCapture=()=>{};
     el.querySelector=()=>node(id+'-child');el.querySelectorAll=()=>el.children;nodes.set(id,el);return el;
   }
@@ -103,18 +105,19 @@ async function checkNavigation(reduced){
     solarModule:{createSolar,worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=9')","Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=10')","Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)");
-  vm.createContext(context);vm.runInContext(script,context);
+  vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
+  const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
-  tick(1);navigate('studio','venus');for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
+  tick(1);navigate('contact','venus');for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
   assert.equal(body.dataset.scene,'planet');assert.equal(node('scene-title').textContent,'Kontakt');
-  navigate('milica',null);if(!reduced){tick(10);assert.equal(node('solar').dataset.world,'studio');}
+  navigate('milica',null);if(!reduced){tick(10);assert.equal(node('solar').dataset.world,'contact');}
   tick(reduced?3:65);assert.equal(body.dataset.world,'milica');assert.equal(body.dataset.scene,'system');
   navigate('milica','earth');tick(4);assert.equal(node('scene-title').textContent,'Miličina aplikacija');
-  node('back-studio').listeners.click();tick(reduced?3:70);assert.equal(body.dataset.world,'studio');assert.equal(body.dataset.scene,'system');
+  navigate('projects','jupiter');tick(reduced?3:70);assert.equal(body.dataset.world,'projects');assert.equal(body.dataset.scene,'planet');
   node('brand-home').listeners.click();tick(reduced?3:70);assert.equal(body.dataset.scene,'galaxy');
   assert.ok(sceneEvents.some(event=>event.world==='milica'));
   if(reduced)assert.ok(shieldFrames.every(age=>age<0),'Reduced motion should skip shield');

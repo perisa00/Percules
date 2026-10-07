@@ -56,7 +56,9 @@
   let worldFlight=null,pendingSelection=null;
   let solar=null,solarLoading=null,journey=0,center=[0,0,0],quality=1,slowFrames=0,qualityFrames=0,focusedBody=null,uiScene='';
   const el=id=>document.getElementById(id),solarCanvas=el('solar'),marker=el('sun-marker'),planetNav=el('planet-nav');
-  const solarPoint=[3.8,0,-1.2],solarScale=.00008;
+  const destinations=globalThis.PerculesDestinations;
+  const galaxyMarkers=Object.values(destinations).filter(d=>d.marker).map(d=>el(d.marker));
+  let solarPoint=[...destinations.studio.point];const solarScale=.00008;
   let solarAnchor=[...solarPoint];
   function sound(detail){if(typeof CustomEvent!=='undefined')document.dispatchEvent?.(new CustomEvent('percules:audio',{detail}));}
   // The shield and half-second jump share the same start time after centering.
@@ -101,17 +103,17 @@
     document.body.dataset.scene=scene;document.body.dataset.world=world;
     const planet=scene==='planet',system=scene==='system',galaxy=scene==='galaxy';
     sound({type:'scene',local:system||planet});
-    el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?(pink?'MILIČIN SVET':'PERCULES SISTEM'):galaxy?'MLEČNI PUT':'PUTOVANJE';
+    el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?destinations[world].name.toLocaleUpperCase('sr-Latn'):galaxy?'MLEČNI PUT':'PUTOVANJE';
     el('location-index').textContent=galaxy?'01 / 03':pink?'03 / 03':'02 / 03';
     el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'PROJEKAT · MILICA':'IZABERI SVOJ SLEDEĆI KORAK'):'PERCULES DIGITAL STUDIO';
-    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Miličin svet.':'Naš mali svemir.'):'Svaki detalj je važan.';
-    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Roze sunce. Jedan svet. Puna posvećenost.':'Jedna priča. Šest svetova. Sajtovi i aplikacije, od ideje do objave.'):'Pravimo sajtove i aplikacije kojima se posvećujemo od prvog razgovora.';
+    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Miličin svet.':world==='studio'?'Percules.':destinations[world].name):'Svaki detalj je važan.';
+    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Roze sunce. Jedan svet. Puna posvećenost.':'Jedna destinacija u našem digitalnom Mlečnom putu.'):'Pravimo sajtove i aplikacije kojima se posvećujemo od prvog razgovora.';
     el('enter-solar').hidden=!galaxy;el('back-system').hidden=!planet;el('back-galaxy').hidden=galaxy||scene==='travel';
-    el('back-studio').hidden=!pink||galaxy||scene==='travel';
-    planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
+    el('back-studio').hidden=true;
+    planetNav.hidden=!pink||!(system||planet);el('scale-note').hidden=true;
     el('planet-labels').hidden=!system;
     if(galaxy||scene==='travel')el('studio-emblem').hidden=true;
-    canvas.setAttribute('aria-label',planet?'Interaktivni prikaz: '+focusedBody.name:system?(pink?'Miličin svet':'Percules sistem'):'Interaktivna galaksija');
+    canvas.setAttribute('aria-label',planet?'Interaktivni prikaz: '+focusedBody.name:system?destinations[world].name:'Interaktivna galaksija');
     planetNav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.planet===focusedBody?.id)));
     document.dispatchEvent(new CustomEvent('percules:scene',{detail:{scene,world,body:focusedBody}}));
   }
@@ -120,19 +122,19 @@
     for(const body of solar.getBodies()){const button=document.createElement('button');button.textContent=body.name;button.dataset.planet=body.id;button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>{pendingSelection=null;solar.select(body.id);wake();});planetNav.append(button);}
   }
   function changeWorld(world,id=null){
-    if(!solar||!['studio','milica'].includes(world))return;
+    if(!solar||!destinations[world])return;
     if(world===solar.worldId()){if(id)solar.select(id);else solar.clearFocus();wake();return;}
     cancelTeleport();pendingSelection=null;
-    if(motion.matches){solar.setWorld(world);rebuildNav();if(id)solar.select(id);toZoom=zoom=cameraLimits.minZoom;uiScene='';wake();return;}
+    if(motion.matches){solarPoint=[...destinations[world].point];navigationTarget=()=>flowPoint(solarPoint);solar.setWorld(world);rebuildNav();if(id)solar.select(id);toZoom=zoom=cameraLimits.minZoom;uiScene='';wake();return;}
     // Aim at the chosen project before the shared jump and shield accelerate.
-    solar.select(solar.worldId()==='studio'?'jupiter':'sun');
+    solar.select(solar.getBodies()[0].id);
     worldFlight={world,id,start:performance.now(),started:false,switched:false};
     document.dispatchEvent(new CustomEvent('percules:close'));
     wake();
   }
   function navigate(detail){
     const world=detail.world||'studio',id=detail.id||null;
-    if(!['studio','milica'].includes(world))return;
+    if(!destinations[world])return;
     if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){changeWorld(world,id);return;}
     cancelTeleport();pendingSelection={world,id};
     ensureSolar()?.then(()=>{if(solar&&pendingSelection)enterSolar();else if(!solar)document.dispatchEvent(new CustomEvent('percules:unavailable'));});
@@ -141,14 +143,14 @@
   function ensureSolar(){
     if(solar||solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=9').then(async module=>{
+    solarLoading=import('./solar.js?v=10').then(async module=>{
       try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
       catch(e){console.warn('Arrival shield unavailable:',e);}
       try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}
       catch(e){console.warn('Jump effect unavailable:',e);}
       solar=module.createSolar(solarCanvas,{onInvalidate:wake,onSelect:body=>{
         if(body){if(!arrival&&!worldFlight)cancelTeleport();sound({type:'select'});}focusedBody=body;vx=vy=0;
-        if(body){const angle=body.id==='sun'?.25:Math.atan2(-body.position[0],-body.position[2])+.6;toYaw=yaw+Math.atan2(Math.sin(angle-yaw),Math.cos(angle-yaw));toPitch=.32;}
+        if(body){const angle=body.id==='sun'?.25:Math.hypot(body.position[0],body.position[2])<.001?-.65:Math.atan2(-body.position[0],-body.position[2])+.6;toYaw=yaw+Math.atan2(Math.sin(angle-yaw),Math.cos(angle-yaw));toPitch=.32;}
         else {toPitch=.73;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));}
         uiScene='';wake();
       },onError:()=>{error.textContent='Detaljan prikaz je prekinut. Vratite se na galaksiju ili osvežite stranicu.';error.hidden=false;}});
@@ -159,12 +161,14 @@
   }
   function enterSolar(){
     if(!solar){pendingTeleport=true;ensureSolar()?.then(()=>{if(solar&&pendingTeleport){pendingTeleport=false;enterSolar();}});return;}
-    pendingTeleport=false;beginTeleport(()=>flowPoint(solarPoint),cameraLimits.minZoom);
+    pendingTeleport=false;
+    const destination=pendingSelection?.world||'studio';solarPoint=[...destinations[destination].point];solar.setWorld(destination);solar.clearFocus();rebuildNav();
+    beginTeleport(()=>flowPoint(solarPoint),cameraLimits.minZoom);
   }
   function changeZoom(delta){
     pendingSelection=null;pendingTeleport=false;if(flight||alignment)toZoom=zoom;cancelTeleport();
     if(journey>.92&&solar?.zoom(delta)){wake();return;}
-    if(delta<0&&toZoom<=cameraLimits.minZoom+.0001&&solar){solar.select(solar.worldId()==='milica'?'earth':'sun');wake();return;}
+    if(delta<0&&toZoom<=cameraLimits.minZoom+.0001&&solar){solar.select(solar.worldId()==='milica'?'earth':solar.getBodies()[0].id);wake();return;}
     toZoom=limitZoom(toZoom*Math.exp(clamp(delta,-500,500)*.00165));
     if(toZoom<.9)ensureSolar();wake();
   }
@@ -669,7 +673,7 @@
       if(elapsed>=.40){
         if(!worldFlight.started){worldFlight.started=true;shieldStart=worldFlight.start+400;sound({type:'jump',duration:jumpDuration,shieldDuration});}
         const t=clamp((elapsed-.40)/jumpDuration,0,1);jumpProgress=t;teleportTarget=phaseForJump(t);
-        if(t>=.48&&!worldFlight.switched){worldFlight.switched=true;solar.setWorld(worldFlight.world);rebuildNav();focusedBody=null;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;uiScene='';}
+        if(t>=.48&&!worldFlight.switched){worldFlight.switched=true;solarPoint=[...destinations[worldFlight.world].point];navigationTarget=()=>flowPoint(solarPoint);solar.setWorld(worldFlight.world);rebuildNav();focusedBody=null;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;uiScene='';}
         if(t>=1){const destination=worldFlight;worldFlight=null;arrival={start:time,age:0};if(destination.id)solar.select(destination.id);uiScene='';}
       }
     }
@@ -719,13 +723,19 @@
     updateScene(flight||worldFlight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
     canvas.dataset.journey=journey>.995?'arrived':journey<.005?'galaxy':'travel';canvas.dataset.navigation=alignment?'centering':flight?'jump':arrival?'braking':'continuous';
     const goal=flightOrigin();canvas.dataset.targetOffset=Math.hypot(...goal).toFixed(6);
-    marker.hidden=journey>.91;
-    if(!marker.hidden){
-      const x=solarAnchor[0]-center[0],y=solarAnchor[1]-center[1],z=solarAnchor[2]-center[2],a=x*Math.cos(yaw)-z*Math.sin(yaw),b=x*Math.sin(yaw)+z*Math.cos(yaw),v=y*Math.cos(pitch)-b*Math.sin(pitch),depth=worldDistance-y*Math.sin(pitch)-b*Math.cos(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
+    const occupied=[];
+    for(const beacon of galaxyMarkers){
+      const point=flowPoint(destinations[beacon.dataset.world].point);
+      const x=point[0]-center[0],y=point[1]-center[1],z=point[2]-center[2],a=x*Math.cos(yaw)-z*Math.sin(yaw),b=x*Math.sin(yaw)+z*Math.cos(yaw),v=y*Math.cos(pitch)-b*Math.sin(pitch),depth=worldDistance-y*Math.sin(pitch)-b*Math.cos(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
       const sx=width/2+(a*cr-v*sr)*height*1.2071/depth,sy=height/2-(a*sr+v*cr)*height*1.2071/depth;
-      marker.dataset.side=sx>width-155?'left':'right';
-      marker.style.transform=`translate(${(clamp(sx,22,width-22)-22).toFixed(1)}px,${(clamp(sy,100,height-150)-22).toFixed(1)}px)`;
-      marker.querySelector('.marker-dot').style.opacity=(1-smoothstep(.56,.83,journey)).toFixed(3);
+      beacon.hidden=journey>.70||depth<=0||sx<22||sx>width-22||sy<125||sy>height-140;
+      if(!beacon.hidden){
+        beacon.dataset.side=sx>width*.58?'left':'right';
+        const nearby=occupied.some(p=>Math.abs(p[0]-sx)<110&&Math.abs(p[1]-sy)<24);
+        beacon.dataset.tight=String(nearby);occupied.push([sx,sy]);
+        beacon.style.transform='translate('+(sx-22).toFixed(1)+'px,'+(sy-22).toFixed(1)+'px)';
+        beacon.querySelector('.marker-dot').style.opacity=(1-smoothstep(.40,.70,journey)).toFixed(3);
+      }
     }
     if(pendingSelection&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){
       const destination=pendingSelection;pendingSelection=null;changeWorld(destination.world,destination.id);
@@ -765,12 +775,12 @@
     }
     e.preventDefault();vx=vy=0;interact();
   });
-  el('enter-solar').addEventListener('click',enterSolar);marker.addEventListener('click',enterSolar);
-  for(const button of [el('enter-solar'),marker]){button.addEventListener('pointerenter',ensureSolar);button.addEventListener('focus',ensureSolar);}
+  el('enter-solar').addEventListener('click',()=>navigate({world:'studio',id:'sun'}));
+  for(const button of [el('enter-solar'),...galaxyMarkers]){button.addEventListener('pointerenter',ensureSolar);button.addEventListener('focus',ensureSolar);}
   for(const id of ['brand-home','back-galaxy','reset-view'])el(id).addEventListener('click',reset);
   document.addEventListener('percules:navigate',e=>navigate(e.detail||{}));
-  document.addEventListener('percules:unfocus',()=>{pendingSelection=null;solar?.clearFocus();wake();});
-  el('back-studio').addEventListener('click',()=>changeWorld('studio'));
+  document.addEventListener('percules:unfocus',()=>{pendingSelection=null;if(solar?.worldId()==='milica'){solar.clearFocus();wake();}else reset();});
+  el('back-studio').addEventListener('click',reset);
   el('back-system').addEventListener('click',()=>{solar?.clearFocus();toZoom=.06;wake();});
   el('zoom-in').addEventListener('click',()=>changeZoom(-260));el('zoom-out').addEventListener('click',()=>changeZoom(260));
   el('motion-toggle').addEventListener('click',toggleMotion);

@@ -3,6 +3,7 @@
 const byId=id=>document.getElementById(id);
 const menu=byId('studio-menu'),toggle=byId('menu-toggle'),panel=byId('detail-panel'),scroll=byId('detail-scroll');
 const articles=[...scroll.querySelectorAll('[data-content]')];
+const destinations=globalThis.PerculesDestinations;
 let current=null,requested=null,origin=null;
 articles.forEach(article=>{article.querySelector('h2').id=article.id+'-title';});
 function dispatch(type,detail){document.dispatchEvent(new CustomEvent(type,{detail}));}
@@ -21,13 +22,14 @@ function show(id,world,focus=true){
   if(current===key&&!panel.hidden)return;
   current=key;articles.forEach(a=>a.hidden=a!==article);panel.hidden=false;
   document.body.dataset.detail='open';panel.setAttribute('aria-labelledby',article.id+'-title');
+  byId('detail-close').setAttribute('aria-label',world==='milica'?'Zatvori detalje i vrati Miličin svet':'Zatvori detalje i vrati galaksiju');
   byId('detail-index').textContent=world==='milica'?'MILIČIN SVET':'PERCULES / '+String(articles.indexOf(article)+1).padStart(2,'0');
   scroll.scrollTop=0;
   if(focus){const heading=article.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});}
 }
 function travel(element){
   origin=element;menuOpen(false);close();
-  const world=element.dataset.world||'studio',id=element.dataset.destination||null;
+  const id=element.dataset.destination||null,world=element.dataset.world||Object.keys(destinations).find(key=>destinations[key].body===id)||'studio';
   requested={world,id};
   dispatch('percules:navigate',requested);
 }

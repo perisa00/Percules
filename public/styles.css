@@ -105,3 +105,21 @@ body[data-scene="system"] .scene-caption{top:134px}.scene-caption{max-width:280p
 @media(max-width:480px){.topbar{left:18px;right:18px}.brand{font-size:11px;letter-spacing:2.3px;gap:6px}.brand-coin:not(.studio-emblem){width:42px;height:42px}.brand small{font-size:6px;letter-spacing:1.8px}.header-actions{gap:6px}.sound-button{width:38px;height:38px}.menu-toggle{min-height:38px;padding:0 12px;font-size:10px;gap:8px}.location{top:64px}.project-card small{letter-spacing:1px}}
 @media(max-height:550px) and (max-width:800px){.detail-panel{left:auto;right:16px;top:92px;bottom:80px;width:48%;height:auto;min-height:0;padding:12px 15px}.detail-panel h2{font-size:23px}body[data-detail="open"] .view-controls{left:16px;right:auto;top:105px}.location{top:50px}.scene-caption{bottom:24%}}
 @media(prefers-reduced-motion:reduce){.detail-panel{animation:none}.world-haze{transition:none}}
+
+/* Every beacon stays at its own position inside the rotating galactic disk. */
+#galaxy-destinations{position:absolute;inset:0;pointer-events:none;z-index:3}
+.galaxy-destination{pointer-events:auto;font-size:8px;letter-spacing:1.4px}
+.galaxy-destination>span:last-child{padding:5px 0}
+.galaxy-destination .marker-dot{width:6px;height:6px;box-shadow:0 0 0 6px #b0ccff10,0 0 17px #93b8ff70}
+.galaxy-destination[data-world="apps"] .marker-dot{background:#abffec;box-shadow:0 0 0 6px #68dabd10,0 0 18px #59dac770}
+.galaxy-destination[data-world="projects"] .marker-dot{background:#e2b9ff;box-shadow:0 0 0 6px #c586fa14,0 0 18px #b576fc88}
+.galaxy-destination[data-world="contact"] .marker-dot{background:#ffe4b8;box-shadow:0 0 0 6px #ffd39510,0 0 18px #ffc67a70}
+.galaxy-destination[data-world="support"] .marker-dot{background:#e5edff}
+.galaxy-destination[data-world="process"] .marker-dot{background:#c8d8ff}
+.galaxy-destination[data-tight="true"]>span:last-child{top:4px;transform:translateY(-100%)}
+body[data-detail="open"]:not([data-world="milica"]) #planet-nav{display:none}
+@media(max-width:800px){.galaxy-destination{font-size:7px;letter-spacing:.8px}.galaxy-destination>span:last-child{left:33px}.galaxy-destination[data-side="left"]>span:last-child{right:33px}.galaxy-destination b{display:none}}
+
+body[data-world="apps"]{--accent:#b8f5e8;--line:#9edbce2c}
+body[data-world="projects"]{--accent:#e2c4ff;--line:#c5a1ea2c}
+body[data-world="contact"]{--accent:#ffe0b7;--line:#e8c9a12c}
