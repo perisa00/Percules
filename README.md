@@ -1,8 +1,8 @@
 # Percules Digital Studio
 
-Sadržaj je raspoređen kroz Mlečni put. Sedam destinacija ima sopstvene koordinate u 3D galaksiji: ko smo, sajtovi, aplikacije, podrška, način rada, projekti i kontakt. Klik prvo usmerava kameru ka izabranoj tački, zatim skok vodi direktno do njenog sveta i sadržaja. Meni pruža direktan pristup istim destinacijama.
+Sadržaj je raspoređen kroz Mlečni put. Sedam destinacija ima sopstvene koordinate u 3D galaksiji: ko smo, sajtovi, aplikacije, podrška, način rada, projekti i kontakt. Klik prvo usmerava kameru ka izabranoj tački, zatim skok vodi do pregleda celog lokalnog sistema (drugi nivo). Dolazak ne bira planetu i ne otvara panel. Prelazak mišem ili prvi dodir objekta pokazuje naziv i kratak opis. Klik, drugi dodir ili „Otvori detalje” otvaraju treći nivo. Zatvaranje detalja vraća ceo sistem. Meni pruža direktan pristup istim destinacijama.
 
-Miličin projekat je zaseban svet sa roze suncem i roze-belom planetom. Ulaz je kroz naše projekte. Ostale celine ne dele jedan Sunčev sistem. Centralna priča studija zadržava originalni metalni 3D amblem.
+Miličin projekat je zaseban svet sa roze suncem i roze-belom planetom. Ulaz je kroz naše projekte. Ostale celine imaju svoje sisteme sa suncem i planetama koje predstavljaju pojedine teme. U sistemu Projekti postoji planeta koja vodi u Miličin roze svet. Centralna priča studija zadržava originalni metalni 3D amblem.
 
 Statički HTML, CSS i JavaScript na srpskoj latinici. Bez frameworka, backenda, analitike ili dodatnih runtime biblioteka. Sve destinacije dele isti WebGL renderer, geometriju i GPU resurse. Površine se generišu u prikazu bez preuzimanja novih tekstura. Podržani su smanjeno kretanje, pauza, zvuk po izboru i rad bez WebGL-a.
 
@@ -14,7 +14,8 @@ Provere: `python scripts/validate_site.py`, `node scripts/check_studio.cjs` i pr
 Koordinate, nazivi i odredišta: `public/destinations.js`.
 Sadržaj i kontakt: `public/index.html`.
 Površine i pojedinačni svetovi: `public/solar.js`.
-Meni i priprema e-maila: `public/studio.js`.
+Oznake izvan galaksije i njihove linije: `public/map-labels.js`.
+Pregledi objekata, meni i priprema e-maila: `public/studio.js`.
 Galaksija, prilazak i teleport: `public/galaxy.js`.
 
 Kontakt: `aleksa.perisic2000@gmail.com`, `+381695312480`. Forma samo priprema mailto poruku; korisnik je šalje u svojoj e-mail aplikaciji. Ne čuva niti šalje podatke na server.

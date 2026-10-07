@@ -123,3 +123,60 @@ body[data-detail="open"]:not([data-world="milica"]) #planet-nav{display:none}
 body[data-world="apps"]{--accent:#b8f5e8;--line:#9edbce2c}
 body[data-world="projects"]{--accent:#e2c4ff;--line:#c5a1ea2c}
 body[data-world="contact"]{--accent:#ffe0b7;--line:#e8c9a12c}
+
+/* Three stages: galactic map, system overview, selected object details. */
+#galaxy-connectors{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:hidden}
+#galaxy-connectors path{fill:none;stroke:#b3cffa;stroke-width:1;stroke-opacity:.30;vector-effect:non-scaling-stroke}
+#galaxy-connectors circle{fill:#d4e4ff;stroke:#a5caff;stroke-width:6;stroke-opacity:.12;visibility:hidden}
+#galaxy-connectors path{visibility:hidden}
+.galaxy-destination{height:48px;min-height:48px;justify-content:flex-start;gap:14px;padding:0 18px;border:1px solid #a5c6f32b;border-radius:12px;background:linear-gradient(120deg,#111c2bdd,#060c16df);font-size:14px;letter-spacing:1px;color:#e6efff;text-shadow:none;box-shadow:0 6px 24px #0003;transition:background .18s,border-color .18s}
+.galaxy-destination:hover{background:#1a2b43ec;border-color:#aecfff75}
+.galaxy-destination>span:last-child,.galaxy-destination[data-side]>span:last-child,.galaxy-destination[data-tight]>span:last-child{position:static;transform:none;padding:0}
+.galaxy-destination b{margin-left:6px;font-size:15px;color:#9bbbe8}
+body[data-scene="galaxy"] .scene-caption{left:50%;bottom:8%;transform:translateX(-50%);width:540px;max-width:calc(100% - 420px);text-align:center}
+body[data-scene="galaxy"] .scene-caption h1{font-size:34px;letter-spacing:-1px;margin-bottom:9px}
+body[data-scene="galaxy"] .scene-caption .eyebrow{margin-bottom:10px}
+body[data-scene="galaxy"] #scene-description{max-width:420px;margin:0 auto;font-size:12px}
+body[data-scene="galaxy"] #enter-solar{display:none}
+body[data-scene="galaxy"] .view-controls{top:auto;bottom:22px;right:28px;transform:none;flex-direction:row;gap:6px}
+body[data-scene="galaxy"] .control-divider,body[data-scene="galaxy"] .coordinate{display:none}
+body[data-scene="galaxy"] .reset-button{margin:0}
+body[data-flight="active"] #galaxy-connectors,body[data-flight="aligning"] #galaxy-connectors{opacity:0}
+body[data-scene="system"] .scene-caption{top:134px;bottom:auto;max-width:360px}
+body[data-scene="system"] .scene-caption h1{font-size:30px}
+body[data-scene="system"] .scene-caption .eyebrow{font-size:8px;margin-bottom:10px}
+body[data-scene="system"] #scene-description{font-size:12px}
+.planet-label{font-size:12px;letter-spacing:.3px;min-height:44px;padding:10px 14px;border:1px solid #b8d3ff20;border-radius:10px;background:#070d18a6;color:#d4e3fa}
+.planet-label:hover,.planet-label:focus-visible{background:#203553cc;color:#fff}
+#planet-nav button{font-size:12px;min-height:44px}
+.object-preview{position:absolute;z-index:5;width:320px;max-width:calc(100% - 36px);padding:22px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,#152236eb,#070e1bf2);backdrop-filter:blur(18px);box-shadow:0 15px 60px #0006;pointer-events:none}
+.object-preview .eyebrow{margin:0 0 10px;font-size:9px;color:var(--accent);letter-spacing:1.3px}
+.object-preview h2{margin:0 0 12px;font-size:23px;line-height:1.2;letter-spacing:-.6px;font-weight:400;text-wrap:balance}
+.object-preview>p:not(.eyebrow){margin:0;font-size:13px;line-height:1.7;color:#b5c5dd}
+.object-preview button{pointer-events:auto;width:100%;min-height:44px;margin-top:14px;padding:12px 0 0;background:none;border-top:1px solid var(--line);font-size:12px;text-align:left;color:var(--accent)}
+.object-context{padding-bottom:20px;margin-bottom:23px;border-bottom:1px solid var(--line)}
+.object-context h3{font-size:20px;line-height:1.3;font-weight:400;margin:0 0 10px;color:var(--accent)}
+.object-context p{margin:0}
+body[data-detail="open"] #planet-nav{display:none}
+@media(max-width:800px){
+.galaxy-destination{font-size:12px;letter-spacing:.5px;gap:11px;padding:0 14px}
+body[data-scene="galaxy"] .scene-caption{left:50%;bottom:86px;top:auto;transform:translateX(-50%);width:100%;max-width:calc(100% - 36px)}
+body[data-scene="galaxy"] .scene-caption h1{font-size:24px;letter-spacing:-.6px;margin:0}
+body[data-scene="galaxy"] .scene-caption .eyebrow,body[data-scene="galaxy"] #scene-description{display:none}
+body[data-scene="galaxy"] .view-controls{right:18px;bottom:max(16px,env(safe-area-inset-bottom));gap:4px}
+body[data-scene="galaxy"] .view-controls .icon-button{width:34px;height:34px;font-size:17px}
+body[data-scene="galaxy"] .bottom-bar{right:138px;font-size:7px;letter-spacing:.6px}
+body[data-scene="system"] .scene-caption{top:126px;max-width:calc(100% - 95px)}
+body[data-scene="system"] .scene-caption h1{font-size:24px}
+body[data-scene="system"] .view-controls{top:138px;bottom:auto;right:16px}
+body[data-scene="system"] .view-controls .icon-button{width:34px;height:34px;font-size:17px}
+body[data-scene="system"] .view-controls .reset-button{display:none}
+.object-preview{left:18px!important;right:18px;top:auto!important;bottom:max(130px,calc(env(safe-area-inset-bottom) + 114px));width:auto;padding:18px 20px}
+.object-preview h2{font-size:21px;margin-bottom:9px}
+.object-preview>p:not(.eyebrow){font-size:12px;line-height:1.6}
+.object-preview button{margin-top:10px}
+.planet-label{font-size:11px;padding:10px;max-width:160px;white-space:normal}
+}
+@media(max-height:550px){body[data-scene="galaxy"] .scene-caption{bottom:66px}body[data-scene="galaxy"] .scene-caption h1{font-size:22px}body[data-scene="galaxy"] .scene-caption .eyebrow,body[data-scene="galaxy"] #scene-description{display:none}body[data-scene="system"] .scene-caption{top:95px}body[data-scene="system"] .scene-caption h1{font-size:23px}body[data-scene="system"] #scene-description{display:none}.object-preview{left:auto!important;right:18px;top:110px!important;bottom:90px;width:280px;overflow:hidden;padding:15px}.object-preview h2{font-size:19px}}
+
+@media(max-width:800px) and (min-height:551px) and (max-height:699px){body[data-scene="galaxy"] .scene-caption{bottom:48px}}
