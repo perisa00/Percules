@@ -129,8 +129,11 @@ body[data-world="contact"]{--accent:#ffe0b7;--line:#e8c9a12c}
 #galaxy-connectors path{fill:none;stroke:#b3cffa;stroke-width:1;stroke-opacity:.30;vector-effect:non-scaling-stroke}
 #galaxy-connectors circle{fill:#d4e4ff;stroke:#a5caff;stroke-width:6;stroke-opacity:.12;visibility:hidden}
 #galaxy-connectors path{visibility:hidden}
-.galaxy-destination{height:48px;min-height:48px;justify-content:flex-start;gap:14px;padding:0 18px;border:1px solid #a5c6f32b;border-radius:12px;background:linear-gradient(120deg,#111c2bdd,#060c16df);font-size:14px;letter-spacing:1px;color:#e6efff;text-shadow:none;box-shadow:0 6px 24px #0003;transition:background .18s,border-color .18s}
-.galaxy-destination:hover{background:#1a2b43ec;border-color:#aecfff75}
+.galaxy-destination{height:38.4px;min-height:44px;justify-content:flex-start;gap:0;padding:0 8px;border:0;border-radius:0;background:transparent;font-size:11.2px;letter-spacing:.8px;color:#d8e7fb;text-shadow:0 2px 12px #020309;box-shadow:none;transition:color .18s,text-shadow .18s}
+.galaxy-destination[data-side="left"]{justify-content:flex-end}
+.galaxy-destination .marker-dot,.galaxy-destination b{display:none}
+.galaxy-destination:hover,.galaxy-destination:focus-visible{background:transparent;color:#fff;text-shadow:0 0 16px #aacfff70}
+.galaxy-destination:focus-visible{outline:1px solid #c3d7ff;outline-offset:2px}
 .galaxy-destination>span:last-child,.galaxy-destination[data-side]>span:last-child,.galaxy-destination[data-tight]>span:last-child{position:static;transform:none;padding:0}
 .galaxy-destination b{margin-left:6px;font-size:15px;color:#9bbbe8}
 body[data-scene="galaxy"] .scene-caption{left:50%;bottom:8%;transform:translateX(-50%);width:540px;max-width:calc(100% - 420px);text-align:center}
@@ -159,7 +162,7 @@ body[data-scene="system"] #scene-description{font-size:12px}
 .object-context p{margin:0}
 body[data-detail="open"] #planet-nav{display:none}
 @media(max-width:800px){
-.galaxy-destination{font-size:12px;letter-spacing:.5px;gap:11px;padding:0 14px}
+.galaxy-destination{font-size:9.6px;letter-spacing:.4px;gap:0;padding:0 6px}
 body[data-scene="galaxy"] .scene-caption{left:50%;bottom:86px;top:auto;transform:translateX(-50%);width:100%;max-width:calc(100% - 36px)}
 body[data-scene="galaxy"] .scene-caption h1{font-size:24px;letter-spacing:-.6px;margin:0}
 body[data-scene="galaxy"] .scene-caption .eyebrow,body[data-scene="galaxy"] #scene-description{display:none}
