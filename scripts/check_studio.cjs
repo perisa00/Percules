@@ -1,0 +1,143 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const os=require('node:os');
+const path=require('node:path');
+const {spawnSync}=require('node:child_process');
+const source=fs.readFileSync('public/solar.js','utf8');
+const shaderPairs=[],draws=[];
+let currentSources=[],id=0;
+const gl=new Proxy({
+VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,
+getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type}),
+shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
+linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
+getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:()=>({}),
+createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
+}, {get:(object,key)=>key in object?object[key]:()=>{}});
+function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
+setAttribute(){},addEventListener(type,fn){this.listeners[type]=fn;},replaceChildren(){this.children=[];},
+append(child){this.children.push(child);},getContext:()=>gl};}
+const labels=element(),emblem=element(),canvas=element(),selections=[];
+const context={Math,Map,Set,Float32Array,Uint16Array,Uint8Array,
+document:{getElementById:id=>id==='planet-labels'?labels:emblem,createElement:element},
+Image:function(){throw Error('Procedural studio must not download planetary images');}};
+vm.createContext(context);
+vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,worlds,bodies};',context);
+const {createSolar,worlds}=context.api;
+assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,2);
+for(const [id,list] of Object.entries(worlds)){
+assert.equal(list.length,id==='milica'?2:1,'Each main destination must have its own world');
+assert.equal(new Set(list.map(b=>b.id)).size,list.length);
+for(const b of list){assert.ok(b.position.every(Number.isFinite));assert.ok(b.radius>0);}
+}
+const solar=createSolar(canvas,{onSelect:body=>selections.push(body?.id||null)});
+solar.size(390,844,1.25);
+assert.equal(labels.children.length,1);assert.equal(solar.worldId(),'studio');
+solar.setWorld('contact');solar.select('venus');assert.equal(solar.focusId(),'venus');
+solar.select('invalid');assert.equal(solar.focusId(),'venus');
+for(const rate of [30,60,120]){
+solar.setWorld('milica');solar.clearFocus();solar.camera({dt:1/rate,target:[0,0,0],distance:150,reducedMotion:true});
+solar.select('earth');let camera;
+for(let i=0;i<rate*3;i++)camera=solar.camera({dt:1/rate,target:[0,0,0],distance:150,reducedMotion:false});
+assert.ok(camera.target.every(Number.isFinite));assert.ok(camera.distance>0);
+const expected=worlds.milica.find(b=>b.id==='earth').position;
+for(let i=0;i<3;i++)assert.ok(Math.abs(camera.target[i]-expected[i])<.001);
+assert.ok(Math.abs(camera.framing-.4)<.001);
+}
+solar.render({dt:1/60,yaw:.25,pitch:.73,roll:-.2,progress:1,reducedMotion:false,viewPrepared:true});
+assert.ok(draws.length>0);assert.equal(solar.setWorld('invalid'),false);
+solar.setWorld('studio');assert.equal(solar.setWorld('milica'),true);assert.equal(solar.isFocused(),false);
+assert.equal(labels.children.length,2);assert.equal(canvas.dataset.world,'milica');
+solar.camera({dt:1/60,target:[0,0,0],distance:80,reducedMotion:true});
+solar.render({dt:1/60,yaw:.25,pitch:.73,progress:1,reducedMotion:true,viewPrepared:true});
+assert.equal(emblem.hidden,true);
+labels.children[1].listeners.click();assert.equal(solar.focusId(),'earth');
+solar.zoom(2500);assert.equal(solar.isFocused(),false);
+for(const region of ['studio','websites','apps','support','process','projects','contact']){
+solar.setWorld(region);assert.equal(labels.children.length,1);solar.select(worlds[region][0].id);
+solar.camera({dt:.016,target:[0,0,0],distance:80,reducedMotion:true});
+solar.render({dt:.016,yaw:-.65,pitch:.32,progress:1,reducedMotion:false,viewPrepared:true});
+}
+const html=fs.readFileSync('public/index.html','utf8');
+for(const body of Object.entries(worlds).filter(([id])=>id!=='milica').flatMap(([,list])=>list))assert.ok(html.includes('data-content="'+body.id+'"'),body.id+' content missing');
+assert.ok(html.includes('data-content="milica"'));
+assert.ok(html.includes('mailto:aleksa.perisic2000@gmail.com'));
+assert.ok(html.includes('tel:+381695312480'));
+const galaxy=fs.readFileSync('public/galaxy.js','utf8');
+assert.ok(galaxy.includes('solar.setWorld(worldFlight.world)'));
+assert.ok(galaxy.includes("shieldStart=worldFlight.start+400"));
+assert.ok(galaxy.includes('if(!frameId&&('),'Only one animation loop may be scheduled');
+if(process.argv.includes('--shaders')){
+const directory=fs.mkdtempSync(path.join(os.tmpdir(),'percules-shaders-'));
+for(let index=0;index<shaderPairs.length;index++){
+const files=shaderPairs[index].map(shader=>{
+const filename=path.join(directory,'program-'+index+(shader.type===35633?'.vert':'.frag'));
+fs.writeFileSync(filename,shader.source);return filename;
+});
+const result=spawnSync('glslangValidator',['-l',...files],{encoding:'utf8'});
+assert.equal(result.status,0,'Shader '+index+' failed:\n'+result.stdout+'\n'+result.stderr);
+}
+console.log('Validated '+shaderPairs.length+' WebGL shader pairs.');
+}
+console.log('Studio checks passed: seven separate galactic worlds, pink system, mobile camera at 30/60/120 FPS, rendering, content and contact.');
+
+async function checkNavigation(reduced){
+  let now=0,sequence=0;
+  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[];
+  const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
+  function node(id){
+    if(nodes.has(id))return nodes.get(id);
+    const el=element();el.id=id;const destination=Object.entries(context.PerculesDestinations||{}).find(([,d])=>d.marker===id);if(destination)el.dataset.world=destination[0];el.classList={add(){},remove(){}};el.focus=()=>{};
+    el.getContext=type=>type==='2d'?ctx2d:null;el.removeAttribute=()=>{};el.setPointerCapture=()=>{};
+    el.querySelector=()=>node(id+'-child');el.querySelectorAll=()=>el.children;nodes.set(id,el);return el;
+  }
+  const body={dataset:{}};
+  const document={body,hidden:false,getElementById:node,createElement:()=>element(),
+    addEventListener:(type,fn)=>{if(!events.has(type))events.set(type,[]);events.get(type).push(fn);},
+    dispatchEvent:event=>{if(event.type==='percules:scene')sceneEvents.push(event.detail);for(const fn of events.get(event.type)||[])fn(event);}};
+  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,
+    document,innerWidth:390,innerHeight:844,devicePixelRatio:1,
+    matchMedia:query=>({matches:query.includes('reduced-motion')?reduced:true,addEventListener(){}}),
+    performance:{now:()=>now},CustomEvent:function(type,options){this.type=type;this.detail=options?.detail;},
+    addEventListener(){},requestAnimationFrame:fn=>{const id=++sequence;frames.set(id,fn);return id;},cancelAnimationFrame:id=>frames.delete(id),
+    solarModule:{createSolar,worlds,bodies:worlds.studio},
+    shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
+    jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
+  let script=galaxy.replace("import('./solar.js?v=10')","Promise.resolve(solarModule)")
+    .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
+    .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)");
+  vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
+  const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
+  function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
+  function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
+  tick(1);navigate('contact','venus');for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
+  assert.equal(body.dataset.scene,'planet');assert.equal(node('scene-title').textContent,'Kontakt');
+  navigate('milica',null);if(!reduced){tick(10);assert.equal(node('solar').dataset.world,'contact');}
+  tick(reduced?3:65);assert.equal(body.dataset.world,'milica');assert.equal(body.dataset.scene,'system');
+  navigate('milica','earth');tick(4);assert.equal(node('scene-title').textContent,'Miličina aplikacija');
+  navigate('projects','jupiter');tick(reduced?3:70);assert.equal(body.dataset.world,'projects');assert.equal(body.dataset.scene,'planet');
+  node('brand-home').listeners.click();tick(reduced?3:70);assert.equal(body.dataset.scene,'galaxy');
+  assert.ok(sceneEvents.some(event=>event.world==='milica'));
+  if(reduced)assert.ok(shieldFrames.every(age=>age<0),'Reduced motion should skip shield');
+  else assert.ok(shieldFrames.some(age=>age>=0),'Shared shield must run on the jump');
+}
+function checkTouch(){
+ const handlers={};const main={addEventListener:(name,fn)=>handlers[name]=fn};
+ const context={document:{querySelector:()=>main}};vm.createContext(context);
+ vm.runInContext(fs.readFileSync('public/touch.js','utf8'),context);
+ const panel={id:'detail-scroll',scrollTop:0,scrollHeight:1000,clientHeight:400};
+ const target={closest:selector=>selector.includes('#detail-scroll')?panel:null};
+ const start=(x=0,y=100)=>handlers.touchstart({target,touches:[{clientX:x,clientY:y}]});
+ const move=(y,two=false)=>{let prevented=false;handlers.touchmove({cancelable:true,touches:two?[{clientY:y},{clientY:y}]:[{clientX:0,clientY:y}],preventDefault(){prevented=true;}});return prevented;};
+ start();assert.equal(move(150),true,'Top edge must freeze the page');
+ start();assert.equal(move(50),false,'Content must scroll inside the panel');
+ panel.scrollTop=600;start();assert.equal(move(50),true,'Bottom edge must freeze the page');
+ start();assert.equal(move(50,true),true,'Two fingers must not move the page');
+ handlers.touchstart({target:{closest:()=>null},touches:[{clientX:0,clientY:100}]});
+ assert.equal(move(50),true,'Galaxy gesture must freeze the document');
+ console.log('Touch checks passed: panel scrolling, edge containment, galaxy drag and multi-touch.');
+}
+checkTouch();
+checkNavigation(false).then(()=>checkNavigation(true)).then(()=>console.log('Navigation checks passed: direct menu, centered project jump, pink world, return, reset, reduced motion and single frame loop.')).catch(error=>{console.error(error);process.exitCode=1;});
