@@ -1,7 +1,7 @@
 name: Validate Percules
 on:
   push:
-    branches: [codex/percules-studio-worlds]
+    branches: [codex/**]
   pull_request:
     branches: [main]
 concurrency:
