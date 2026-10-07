@@ -211,6 +211,13 @@
     // rotation speed pulls the outer arms inward while preserving the core.
     const liquidFlow = `
       uniform float uBreath,uCompression,uFlowPull;
+      float diskWarp(vec2 p){
+        // sin(2*angle+phase), expressed without the undefined atan(0,0).
+        // The Cartesian form keeps the shared center vertex finite and continuous.
+        float r2=dot(p,p),r=sqrt(r2),phase=r*.55;
+        vec2 wave=vec2(2.*p.x*p.y,p.x*p.x-p.y*p.y)/max(r2,.0000001);
+        return dot(wave,vec2(cos(phase),sin(phase)))*.085*min(r/4.,1.);
+      }
       vec3 flow(vec3 p){
         float r=length(p.xz);
         float envelope=smoothstep(.3,1.6,r)*(1.-smoothstep(7.,8.5,r));
@@ -267,7 +274,7 @@
         vDisk=aPosition.xz;
         vec3 p=aPosition;float r=length(p.xz);
         p.y+=uLayer*(0.045+0.26*exp(-r*r*0.55));
-        p.y+=sin(atan(p.z,p.x)*2.0+r*0.55)*0.085*min(r/4.0,1.0);
+        p.y+=diskWarp(p.xz);
         gl_Position=project(view(flow(p)));
       }
     `, `
@@ -280,7 +287,8 @@
       float fbm(vec2 p){return noise(p)*0.53+noise(p*2.03+13.1)*0.27+noise(p*4.09+27.7)*0.13+noise(p*8.21)*0.07;}
       void main(){
         vec2 p=vDisk;float r=length(p),edge=1.0-smoothstep(5.4,8.0,r);if(edge<=0.0)discard;
-        float angle=atan(p.y,p.x),spiral=angle-log(r+0.8)*3.9;
+        float angle=0.;if(r>.0001)angle=atan(p.y,p.x);
+        float spiral=angle-log(r+0.8)*3.9;
         float turbulent=fbm(p*2.4);
         float arms=pow(0.5+0.5*cos(spiral*4.0+(turbulent-0.5)*1.35),4.0);
         float broken=smoothstep(0.18,0.82,fbm(p*5.0+3.7));
@@ -370,7 +378,7 @@
           float r=length(p.xz),edge=1.-smoothstep(6.4,8.4,r);
           vec3 photo=texture2D(uTexture,p.xz/17.+.5).rgb;
           float luminance=dot(photo,vec3(.2126,.7152,.0722));
-          float warp=sin(atan(p.z,p.x)*2.+r*.55)*.085*min(r/4.,1.);
+          float warp=diskWarp(p.xz);
           float thickness=.15+.44*exp(-r*.65);
           float height=(p.y-warp)/thickness;
           float n=volumeNoise(p*vec3(1.7,4.8,1.7)+32.);
