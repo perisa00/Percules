@@ -53,6 +53,7 @@
   let pointers = new Map(), lastPinch = 0;
   let draw, resizeRenderer;
   let flight=null,alignment=null,arrival=null,navigationTarget=null,pendingTeleport=false,teleportEnergy=0,worldDistance=20,worldFraming=0;
+  let worldFlight=null,pendingSelection=null;
   let solar=null,solarLoading=null,journey=0,center=[0,0,0],quality=1,slowFrames=0,qualityFrames=0,focusedBody=null,uiScene='';
   const el=id=>document.getElementById(id),solarCanvas=el('solar'),marker=el('sun-marker'),planetNav=el('planet-nav');
   const solarPoint=[3.8,0,-1.2],solarScale=.00008;
@@ -87,7 +88,7 @@
     sound({type:'jump',delay:alignment.duration,duration:jumpDuration,shieldDuration});
     flight=null;wake();
   }
-  function cancelTeleport(){sound({type:'cancel'});alignment=arrival=navigationTarget=null;flight=null;jumpProgress=-1;shieldStart=null;shieldAge=-1;teleportEnergy=0;}
+  function cancelTeleport(){sound({type:'cancel'});worldFlight=null;alignment=arrival=navigationTarget=null;flight=null;jumpProgress=-1;shieldStart=null;shieldAge=-1;teleportEnergy=0;}
   function flowPoint(p){
     const r=Math.hypot(p[0],p[2]),envelope=smoothstep(.3,1.6,r)*(1-smoothstep(7,8.5,r));
     const angle=envelope*flowPull*(.12+r*.10),c=Math.cos(angle),s=Math.sin(angle);
@@ -95,37 +96,65 @@
     return [(p[0]*c-p[2]*s)*scale,p[1]*(1-compression*.16)+breath*2.6*envelope,(p[0]*s+p[2]*c)*scale];
   }
   function updateScene(scene){
-    const key=scene+(focusedBody?.id||'')+(flight?'teleport':'');if(uiScene===key)return;uiScene=key;document.body.dataset.scene=scene;
+    const world=solar?.worldId()||'studio',pink=world==='milica';
+    const key=scene+(focusedBody?.id||'')+world+(flight||worldFlight?'teleport':'');if(uiScene===key)return;uiScene=key;
+    document.body.dataset.scene=scene;document.body.dataset.world=world;
     const planet=scene==='planet',system=scene==='system',galaxy=scene==='galaxy';
     sound({type:'scene',local:system||planet});
-    el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?'SUNČEV SISTEM':galaxy?'MLEČNI PUT':flight?'TELEPORT':'PRILAZAK SUNČEVOM SISTEMU';
-    el('location-index').textContent=planet?'03 / 03':galaxy?'01 / 03':'02 / 03';
-    el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?'NAŠ DEO SVEMIRA':'ISTRAŽI SVOJIM POKRETOM';
-    el('scene-title').textContent=planet?focusedBody.name:system?'Sunčev sistem.':'Mlečni put.';
-    el('scene-description').textContent=planet?focusedBody.text:system?'Jedna zvezda. Osam svetova. Izaberi svoj sledeći korak.':'Od beskraja do našeg malog sveta.';
+    el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?(pink?'MILIČIN SVET':'PERCULES SISTEM'):galaxy?'MLEČNI PUT':'PUTOVANJE';
+    el('location-index').textContent=galaxy?'01 / 03':pink?'03 / 03':'02 / 03';
+    el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'PROJEKAT · MILICA':'IZABERI SVOJ SLEDEĆI KORAK'):'PERCULES DIGITAL STUDIO';
+    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Miličin svet.':'Naš mali svemir.'):'Svaki detalj je važan.';
+    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Roze sunce. Jedan svet. Puna posvećenost.':'Jedna priča. Šest svetova. Sajtovi i aplikacije, od ideje do objave.'):'Pravimo sajtove i aplikacije kojima se posvećujemo od prvog razgovora.';
     el('enter-solar').hidden=!galaxy;el('back-system').hidden=!planet;el('back-galaxy').hidden=galaxy||scene==='travel';
-    planetNav.hidden=!(system||planet);el('scale-note').hidden=galaxy||scene==='travel';
+    el('back-studio').hidden=!pink||galaxy||scene==='travel';
+    planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
     el('planet-labels').hidden=!system;
-    canvas.setAttribute('aria-label',planet?`Interaktivni prikaz: ${focusedBody.name}`:system?'Interaktivni Sunčev sistem':'Interaktivna galaksija');
+    if(galaxy||scene==='travel')el('studio-emblem').hidden=true;
+    canvas.setAttribute('aria-label',planet?'Interaktivni prikaz: '+focusedBody.name:system?(pink?'Miličin svet':'Percules sistem'):'Interaktivna galaksija');
     planetNav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.planet===focusedBody?.id)));
+    document.dispatchEvent(new CustomEvent('percules:scene',{detail:{scene,world,body:focusedBody}}));
+  }
+  function rebuildNav(){
+    planetNav.replaceChildren();
+    for(const body of solar.getBodies()){const button=document.createElement('button');button.textContent=body.name;button.dataset.planet=body.id;button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>{pendingSelection=null;solar.select(body.id);wake();});planetNav.append(button);}
+  }
+  function changeWorld(world,id=null){
+    if(!solar||!['studio','milica'].includes(world))return;
+    if(world===solar.worldId()){if(id)solar.select(id);else solar.clearFocus();wake();return;}
+    cancelTeleport();pendingSelection=null;
+    if(motion.matches){solar.setWorld(world);rebuildNav();if(id)solar.select(id);toZoom=zoom=cameraLimits.minZoom;uiScene='';wake();return;}
+    // Aim at the chosen project before the shared jump and shield accelerate.
+    solar.select(solar.worldId()==='studio'?'jupiter':'sun');
+    worldFlight={world,id,start:performance.now(),started:false,switched:false};
+    document.dispatchEvent(new CustomEvent('percules:close'));
+    wake();
+  }
+  function navigate(detail){
+    const world=detail.world||'studio',id=detail.id||null;
+    if(!['studio','milica'].includes(world))return;
+    if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){changeWorld(world,id);return;}
+    cancelTeleport();pendingSelection={world,id};
+    ensureSolar()?.then(()=>{if(solar&&pendingSelection)enterSolar();else if(!solar)document.dispatchEvent(new CustomEvent('percules:unavailable'));});
+    wake();
   }
   function ensureSolar(){
     if(solar||solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=8b').then(async module=>{
+    solarLoading=import('./solar.js?v=9').then(async module=>{
       try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
       catch(e){console.warn('Arrival shield unavailable:',e);}
       try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}
       catch(e){console.warn('Jump effect unavailable:',e);}
       solar=module.createSolar(solarCanvas,{onInvalidate:wake,onSelect:body=>{
-        if(body){cancelTeleport();sound({type:'select'});}focusedBody=body;vx=vy=0;
+        if(body){if(!arrival&&!worldFlight)cancelTeleport();sound({type:'select'});}focusedBody=body;vx=vy=0;
         if(body){const angle=body.id==='sun'?.25:Math.atan2(-body.position[0],-body.position[2])+.6;toYaw=yaw+Math.atan2(Math.sin(angle-yaw),Math.cos(angle-yaw));toPitch=.32;}
         else {toPitch=.73;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));}
         uiScene='';wake();
       },onError:()=>{error.textContent='Detaljan prikaz je prekinut. Vratite se na galaksiju ili osvežite stranicu.';error.hidden=false;}});
-      for(const body of module.bodies){const button=document.createElement('button');button.textContent=body.name;button.dataset.planet=body.id;button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>{solar.select(body.id);wake();});planetNav.append(button);}
+      rebuildNav();
       solar.size(width,height,dpr);canvas.dataset.solar='ready';error.hidden=true;wake();
-    }).catch(e=>{console.error('Solar initialization failed:',e);flight=null;toZoom=1;error.textContent='Sunčev sistem nije učitan. Pokušajte ponovo dugmetom Istraži.';error.hidden=false;solarLoading=null;wake();}).finally(()=>el('enter-solar').removeAttribute('aria-busy'));
+    }).catch(e=>{console.error('Solar initialization failed:',e);flight=null;toZoom=1;error.textContent='3D sistem nije učitan. Sadržaj možete otvoriti kroz Meni.';document.dispatchEvent(new CustomEvent('percules:unavailable'));error.hidden=false;solarLoading=null;wake();}).finally(()=>el('enter-solar').removeAttribute('aria-busy'));
     return solarLoading;
   }
   function enterSolar(){
@@ -133,9 +162,9 @@
     pendingTeleport=false;beginTeleport(()=>flowPoint(solarPoint),cameraLimits.minZoom);
   }
   function changeZoom(delta){
-    pendingTeleport=false;if(flight||alignment)toZoom=zoom;cancelTeleport();
+    pendingSelection=null;pendingTeleport=false;if(flight||alignment)toZoom=zoom;cancelTeleport();
     if(journey>.92&&solar?.zoom(delta)){wake();return;}
-    if(delta<0&&toZoom<=cameraLimits.minZoom+.0001&&solar){solar.select('earth');wake();return;}
+    if(delta<0&&toZoom<=cameraLimits.minZoom+.0001&&solar){solar.select(solar.worldId()==='milica'?'earth':'sun');wake();return;}
     toZoom=limitZoom(toZoom*Math.exp(clamp(delta,-500,500)*.00165));
     if(toZoom<.9)ensureSolar();wake();
   }
@@ -635,9 +664,18 @@
       if(t===1){if(flight.to<flight.from)arrival={start:flight.start+flight.duration*1000,age:Math.max(0,(time-flight.start-flight.duration*1000)/1000)};zoom=toZoom;flight=null;jumpProgress=-1;}
     }
     else zoom=Math.exp(lerp(Math.log(zoom),Math.log(toZoom),motion.matches?1:1-Math.exp(-dt*4.5)));
+    if(worldFlight){
+      const elapsed=(time-worldFlight.start)/1000;
+      if(elapsed>=.40){
+        if(!worldFlight.started){worldFlight.started=true;shieldStart=worldFlight.start+400;sound({type:'jump',duration:jumpDuration,shieldDuration});}
+        const t=clamp((elapsed-.40)/jumpDuration,0,1);jumpProgress=t;teleportTarget=phaseForJump(t);
+        if(t>=.48&&!worldFlight.switched){worldFlight.switched=true;solar.setWorld(worldFlight.world);rebuildNav();focusedBody=null;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;uiScene='';}
+        if(t>=1){const destination=worldFlight;worldFlight=null;arrival={start:time,age:0};if(destination.id)solar.select(destination.id);uiScene='';}
+      }
+    }
     teleportEnergy=motion.matches?0:teleportTarget;
     canvas.dataset.teleport=flight||teleportEnergy>.01?'active':'idle';
-    document.body.dataset.flight=alignment?'aligning':flight||teleportEnergy>.08?'active':arrival?'arrival':'idle';
+    document.body.dataset.flight=alignment||worldFlight&&!worldFlight.started?'aligning':flight||worldFlight||teleportEnergy>.08?'active':arrival?'arrival':'idle';
     journey=clamp(Math.log(1/zoom)/Math.log(1/cameraLimits.minZoom),0,1);
     
     cameraRoll=lerp(cameraRoll,-.20+(motion.matches?0:clamp(toYaw-yaw,-.3,.3)*.018)+(breathingEnabled&&journey>.98&&!focusedBody?Math.sin(effectTime*.38)*.009:0),ease);
@@ -662,7 +700,7 @@
     solarAnchor=flowPoint(solarPoint);
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
-    const systemFit=Math.max(65,66/(width/height));
+    const systemFit=solar?.worldId()==='milica'?Math.max(34,36/(width/height)):Math.max(65,66/(width/height));
     worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);
@@ -678,7 +716,7 @@
     if(solar){try{solar.render({dt,yaw,pitch,roll:cameraRoll,progress:journey,reducedMotion:motion.matches||!breathingEnabled,quality,viewPrepared:true});}catch(e){console.error('Solar frame failed:',e);solar=null;solarLoading=null;focusedBody=null;flight=null;jumpProgress=-1;planetNav.replaceChildren();el('planet-labels').replaceChildren();toZoom=1;error.textContent='Detaljan prikaz je prekinut. Pokušajte ponovo dugmetom Istraži.';error.hidden=false;}}
     drawHyperspace(time);
     shieldRenderer?.render(shieldAge,width,height,dpr);
-    updateScene(flight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
+    updateScene(flight||worldFlight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
     canvas.dataset.journey=journey>.995?'arrived':journey<.005?'galaxy':'travel';canvas.dataset.navigation=alignment?'centering':flight?'jump':arrival?'braking':'continuous';
     const goal=flightOrigin();canvas.dataset.targetOffset=Math.hypot(...goal).toFixed(6);
     marker.hidden=journey>.91;
@@ -689,14 +727,17 @@
       marker.style.transform=`translate(${(clamp(sx,22,width-22)-22).toFixed(1)}px,${(clamp(sy,100,height-150)-22).toFixed(1)}px)`;
       marker.querySelector('.marker-dot').style.opacity=(1-smoothstep(.56,.83,journey)).toFixed(3);
     }
+    if(pendingSelection&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){
+      const destination=pendingSelection;pendingSelection=null;changeWorld(destination.world,destination.id);
+    }
     const unsettled=Math.abs(toYaw-yaw)+Math.abs(toPitch-pitch)+Math.abs(toZoom-zoom)+Math.abs(vx)+Math.abs(vy)>.0001;
-    if(shieldAge>=0||teleportEnergy>.001||flight||alignment||arrival||breathingEnabled||pointers.size||unsettled||effectEnergy>.0001||compression>.0001||Math.abs(flowPull)+Math.abs(flowVelocity)>.0001||Math.abs(cameraRoll+.20)>.00001)frameId=requestAnimationFrame(frame);
+    if(!frameId&&(shieldAge>=0||teleportEnergy>.001||flight||worldFlight||pendingSelection||alignment||arrival||breathingEnabled||pointers.size||unsettled||effectEnergy>.0001||compression>.0001||Math.abs(flowPull)+Math.abs(flowVelocity)>.0001||Math.abs(cameraRoll+.20)>.00001))frameId=requestAnimationFrame(frame);
   }
   function wake(){if(!frameId&&!document.hidden&&!lost)frameId=requestAnimationFrame(frame);}
   function interact(){wake();}
-  function reset(){pendingTeleport=false;cancelTeleport();jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
+  function reset(){pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
   canvas.addEventListener('pointerdown',e=>{
-    if(e.button!==0)return;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,time:e.timeStamp});vx=vy=0;lastPinch=0;canvas.classList.add('dragging');interact();
+    if(e.button!==0)return;pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,time:e.timeStamp});vx=vy=0;lastPinch=0;canvas.classList.add('dragging');interact();
   });
   canvas.addEventListener('pointermove',e=>{
     const old=pointers.get(e.pointerId);if(!old)return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,time:e.timeStamp});
@@ -727,11 +768,14 @@
   el('enter-solar').addEventListener('click',enterSolar);marker.addEventListener('click',enterSolar);
   for(const button of [el('enter-solar'),marker]){button.addEventListener('pointerenter',ensureSolar);button.addEventListener('focus',ensureSolar);}
   for(const id of ['brand-home','back-galaxy','reset-view'])el(id).addEventListener('click',reset);
+  document.addEventListener('percules:navigate',e=>navigate(e.detail||{}));
+  document.addEventListener('percules:unfocus',()=>{pendingSelection=null;solar?.clearFocus();wake();});
+  el('back-studio').addEventListener('click',()=>changeWorld('studio'));
   el('back-system').addEventListener('click',()=>{solar?.clearFocus();toZoom=.06;wake();});
   el('zoom-in').addEventListener('click',()=>changeZoom(-260));el('zoom-out').addEventListener('click',()=>changeZoom(260));
   el('motion-toggle').addEventListener('click',toggleMotion);
   el('about-toggle').addEventListener('click',()=>{const panel=el('about-panel');panel.hidden=!panel.hidden;el('about-toggle').setAttribute('aria-expanded',String(!panel.hidden));});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){el('about-panel').hidden=true;el('about-toggle').setAttribute('aria-expanded','false');if(focusedBody)solar.clearFocus();wake();}});
+  document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;if(e.key==='Escape'){el('about-panel').hidden=true;el('about-toggle').setAttribute('aria-expanded','false');if(focusedBody)solar.clearFocus();wake();}});
   addEventListener('resize',resize);
   addEventListener('blur',()=>{pointers.clear();vx=vy=0;canvas.classList.remove('dragging');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameId);frameId=0;}else{previousTime=0;wake();}});

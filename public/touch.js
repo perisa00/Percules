@@ -9,7 +9,7 @@
   scene.addEventListener('touchstart', event => {
     scrollGesture = null;
     if (event.touches.length !== 1) return;
-    const panel = event.target.closest?.('#about-panel, #planet-nav');
+    const panel = event.target.closest?.('#about-panel, #planet-nav, #detail-scroll, #studio-menu, textarea');
     if (!panel) return;
     const touch = event.touches[0];
     scrollGesture = { panel, x: touch.clientX, y: touch.clientY };
