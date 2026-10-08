@@ -104,6 +104,21 @@ for(const p of nearby){
 const shifted=closePoints.map(p=>({...p,x:p.x+70}));
 const tracked=mapContext.PerculesMapLabels.layout(shifted,1009,588);
 for(const p of tracked){const before=nearby.find(a=>a.id===p.id);assert.ok(Math.abs(p.labelX-before.labelX-70)<.001,'Labels must follow the galaxy instead of fixed rails');}
+const mapper=mapContext.PerculesMapLabels;
+let failures=0;
+for(const [w,h] of [[390,844],[320,568],[1280,720],[1009,588],[844,390]]){
+ for(const angle of [0,.4,.8,1.2,1.6,2,2.4,2.8]){
+  const rx=Math.min(w*.25,h*.42),ry=rx*.48;
+  const samples=Array.from({length:64},(_,i)=>{const t=i*Math.PI/32,x=rx*Math.cos(t),y=ry*Math.sin(t);return{x:w/2+x*Math.cos(angle)-y*Math.sin(angle),y:h/2+x*Math.sin(angle)+y*Math.cos(angle),depth:20}});
+  const hull=mapper.outline(samples);
+  const points=Array.from({length:7},(_,i)=>{const p=samples[i*8];return{id:String(i),name:['Studio','Sajtovi','Aplikacije','Podrška','Kako radimo','Projekti','Kontakt'][i],x:w/2+(p.x-w/2)*.55,y:h/2+(p.y-h/2)*.55,depth:20}});
+  const placed=mapper.layout(points,w,h,hull);
+  for(const p of placed){if(!mapper.outside(p.labelX,p.labelY,p.width,hull)){console.log('inside',w,h,angle,p.id);failures++;}}
+  for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++){const a=placed[i],b=placed[j];if(Math.abs(a.labelY-b.labelY)<32&&a.labelX+a.width>b.labelX&&b.labelX+b.width>a.labelX){console.log('overlap',w,h,angle,a.id,b.id);failures++;}}
+ }
+}
+assert.equal(failures,0);console.log('Outside layout checks passed.');
+
 if(process.argv.includes('--shaders')){
 const directory=fs.mkdtempSync(path.join(os.tmpdir(),'percules-shaders-'));
 for(let index=0;index<shaderPairs.length;index++){
