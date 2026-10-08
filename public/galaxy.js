@@ -742,15 +742,30 @@
     const layout=globalThis.PerculesMapLabels.layout(mapPoints,width,height,boundary);
     el('galaxy-connectors').setAttribute('viewBox','0 0 '+width+' '+height);
     el('galaxy-connectors').hidden=journey>.70;
-    for(const point of layout){
+    const displayed=layout.map(point=>{
+      const previous=labelPositions.get(point.id)||point,blend=motion.matches?1:1-Math.exp(-dt*12);
+      let x=lerp(previous.labelX,point.labelX,blend),y=lerp(previous.labelY,point.labelY,blend);
+      if(!globalThis.PerculesMapLabels.outside(x,y,point.width,boundary)){x=point.labelX;y=point.labelY;}
+      return {...point,displayX:x,displayY:y};
+    });
+    // Resolve intermediate collisions when two callouts exchange exterior slots.
+    for(let pass=0;pass<displayed.length;pass++){
+      let changed=false;
+      for(let i=0;i<displayed.length;i++)for(let j=i+1;j<displayed.length;j++){
+        const a=displayed[i],b=displayed[j];
+        if(Math.abs(a.displayY-b.displayY)<32&&a.displayX<b.width+b.displayX&&b.displayX<a.width+a.displayX){
+          if(a.displayX!==a.labelX||a.displayY!==a.labelY||b.displayX!==b.labelX||b.displayY!==b.labelY)changed=true;
+          a.displayX=a.labelX;a.displayY=a.labelY;b.displayX=b.labelX;b.displayY=b.labelY;
+        }
+      }
+      if(!changed)break;
+    }
+    for(const point of displayed){
       const beacon=el(destinations[point.id].marker),line=el('connector-'+point.id),pin=el('pin-'+point.id);
       beacon.hidden=journey>.70||point.depth<=0||!globalThis.PerculesMapLabels.outside(point.labelX,point.labelY,point.width,boundary);
       line.style.visibility=pin.style.visibility=beacon.hidden?'hidden':'visible';
       if(!beacon.hidden){
-        const previous=labelPositions.get(point.id)||point,blend=motion.matches?1:1-Math.exp(-dt*12);
-        let x=lerp(previous.labelX,point.labelX,blend),y=lerp(previous.labelY,point.labelY,blend);
-        // Easing across a rotating silhouette must never carry text over the disk.
-        if(!globalThis.PerculesMapLabels.outside(x,y,point.width,boundary)){x=point.labelX;y=point.labelY;}
+        const x=point.displayX,y=point.displayY;
         labelPositions.set(point.id,{labelX:x,labelY:y,side:point.side});
         beacon.dataset.side=point.side;beacon.style.width=point.width+'px';beacon.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
         const endX=point.side==='left'?x+point.width:x,endY=y+22,elbowX=endX+(point.side==='left'?18:-18);

@@ -36,17 +36,16 @@
     const placed=[],result=new Map(),gap=compact?20:26,labelHeight=boundary.length?32:48;
     const rimTop=boundary.length?Math.min(...boundary.map(p=>p.y)):0;
     const rimBottom=boundary.length?Math.max(...boundary.map(p=>p.y)):0;
-    const ordered=[...points].sort((a,b)=>Math.hypot(b.x-middleX,b.y-middleY)-Math.hypot(a.x-middleX,a.y-middleY)||a.id.localeCompare(b.id));
+    const ordered=[...points].sort((a,b)=>boundary.length?a.id.localeCompare(b.id):Math.hypot(b.x-middleX,b.y-middleY)-Math.hypot(a.x-middleX,a.y-middleY)||a.id.localeCompare(b.id));
     for(const p of ordered){
       const name=p.name||p.id;
       const labelWidth=Math.min(compact?120:136,Math.max(72,Array.from(name).length*(compact?5.8:6.7)+(compact?24:29)),width-2*margin);
       const px=Number.isFinite(p.x)?p.x:width/2,py=Number.isFinite(p.y)?p.y:height/2;
       const preferred=px<middleX?'left':'right';
       let best=null,bestScore=Infinity;
+      const rows=[...new Set([py-22,py-74,py+30,py-126,py+82,py-178,py+134,rimTop-66,rimBottom+14,top,bottom-48,...placed.flatMap(a=>[a.labelY-labelHeight-4,a.labelY+labelHeight+4])].map(y=>clamp(y,top,Math.max(top,bottom-48))))].map(y=>({y,range:bandRange(boundary,y)}));
       for(const side of [preferred,preferred==='left'?'right':'left']){
-        for(const desiredY of [py-22,py-74,py+30,py-126,py+82,py-178,py+134,rimTop-66,rimBottom+14,top,bottom-48,...placed.flatMap(a=>[a.labelY-labelHeight-4,a.labelY+labelHeight+4])]){
-          const y=clamp(desiredY,top,Math.max(top,bottom-48));
-          const range=bandRange(boundary,y);
+        for(const {y,range} of rows){
           for(const extra of [0,44,88,132,176]){
           const desiredX=side==='left'?Math.min(px-gap,range.left-12)-extra-labelWidth:Math.max(px+gap,range.right+12)+extra;
           const x=clamp(desiredX,margin,width-margin-labelWidth);
@@ -54,7 +53,7 @@
           let overlaps=0,covered=0;
           for(const a of placed)if(x<a.labelX+a.width+6&&x+labelWidth+6>a.labelX&&y<a.labelY+labelHeight&&y+labelHeight>a.labelY)overlaps++;
           for(const a of finite)if(a.id!==p.id&&a.x>x-5&&a.x<x+labelWidth+5&&a.y>y+10&&a.y<y+34)covered++;
-          const score=Math.hypot(edge-px,y+22-py)+((x+labelWidth<=range.left-12||x>=range.right+12)?0:1000000)+overlaps*10000+covered*300+(side===preferred?0:8)+(p.previousSide&&actualSide!==p.previousSide?14:0);
+          const score=Math.hypot(edge-px,y+22-py)+((x+labelWidth<=range.left-12||x>=range.right+12)?0:1000000)+overlaps*10000+covered*300+(side===preferred?0:8)+(p.previousSide&&actualSide!==p.previousSide?(boundary.length?70:14):0);
           if(score<bestScore){bestScore=score;best={...p,width:labelWidth,labelX:x,labelY:y,side:actualSide};}
         }
       }
