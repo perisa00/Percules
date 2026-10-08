@@ -91,6 +91,19 @@ for(const [w,h] of [[390,844],[320,568],[1280,720],[844,390]]){
  for(const p of placed){assert.ok(p.labelX>=0&&p.labelY>=90);assert.ok(p.labelX+p.width<=w);assert.ok(p.labelY+48<=h-50);assert.equal(p.x,points[Number(p.id)].x);}
  for(let i=0;i<7;i++)for(let j=i+1;j<7;j++){const a=placed[i],b=placed[j];assert.ok(Math.abs(a.labelY-b.labelY)>=48||a.labelX+a.width<=b.labelX||b.labelX+b.width<=a.labelX,'Map labels overlap at '+w+'x'+h);}
 }
+const closePoints=[
+{id:'studio',name:'Ko smo',x:578,y:301.5,depth:20},{id:'websites',name:'Sajtovi',x:473.9,y:257.2,depth:20},
+{id:'apps',name:'Aplikacije',x:558.9,y:341.7,depth:20},{id:'support',name:'Podrška',x:382.2,y:293.3,depth:20},
+{id:'process',name:'Način rada',x:362.2,y:258.7,depth:20},{id:'projects',name:'Projekti',x:671,y:332.7,depth:20},
+{id:'contact',name:'Kontakt',x:585.6,y:276.7,depth:20}];
+const nearby=mapContext.PerculesMapLabels.layout(closePoints,1009,588);
+for(const p of nearby){
+ const edge=p.side==='left'?p.labelX+p.width:p.labelX;
+ assert.ok(Math.hypot(edge-p.x,p.labelY+22-p.y)<90,'A label must stay near its galactic point');
+}
+const shifted=closePoints.map(p=>({...p,x:p.x+70}));
+const tracked=mapContext.PerculesMapLabels.layout(shifted,1009,588);
+for(const p of tracked){const before=nearby.find(a=>a.id===p.id);assert.ok(Math.abs(p.labelX-before.labelX-70)<.001,'Labels must follow the galaxy instead of fixed rails');}
 if(process.argv.includes('--shaders')){
 const directory=fs.mkdtempSync(path.join(os.tmpdir(),'percules-shaders-'));
 for(let index=0;index<shaderPairs.length;index++){
