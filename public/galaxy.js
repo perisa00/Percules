@@ -62,7 +62,7 @@
   const destinations=globalThis.PerculesDestinations;
   const galaxyMarkers=Object.values(destinations).filter(d=>d.marker).map(d=>el(d.marker));
   function updateBeaconLight(){
-    const next=hoveredWorld||focusedWorld||pointedWorld;
+    const next=hoveredWorld||pointedWorld||focusedWorld;
     if(next===litWorld)return;litWorld=next;
     for(const button of galaxyMarkers){
       const active=button.dataset.world===next;
@@ -98,10 +98,10 @@
         const base=offset+layer*8;
         for(let axis=0;axis<3;axis++){
           beaconData[base+axis]=point[axis];
-          beaconData[base+3+axis]=layer?tint[axis]:lerp([.82,.88,1][axis],tint[axis],level*.75);
+          beaconData[base+3+axis]=layer?tint[axis]:lerp([.90,.94,1][axis],tint[axis],.65+level*.15);
         }
-        beaconData[base+6]=layer?11+25*level:2.15+11*level;
-        beaconData[base+7]=(layer?.28*level:.62+3.4*level)*fade;
+        beaconData[base+6]=layer?36+20*level:12+6*level;
+        beaconData[base+7]=(layer?.40+.60*level:3.4+3.2*level)*fade;
       }
     });
   }
@@ -334,7 +334,10 @@
         }else{
           gl_Position=project(v);
           float stellarScale=mix(20.,2.8,smoothstep(.035,.28,uJourney));
-          gl_PointSize=clamp(aSize*uDpr*(uLocal>.5?.024:stellarScale)/max(-v.z,.00001),.65,uLocal>.5?7.:(uBeacon>.5?48.:12.));
+          float size=aSize*uDpr*(uLocal>.5?.024:stellarScale)/max(-v.z,.00001);
+          // Destinations remain readable in the wide view, including narrow phones.
+          if(uBeacon>.5)size=aSize*uDpr*clamp(stellarScale/max(-v.z,.00001),.95,1.6);
+          gl_PointSize=clamp(size,.65,uLocal>.5?7.:(uBeacon>.5?64.:12.));
           if(-v.z<uNear)gl_PointSize=0.;
         }
         float shimmer=sin(uTime*.65+dot(aPosition,vec3(11.7,23.1,7.9)));
@@ -692,11 +695,11 @@
       if(journey<.24)galaxyMarkers.forEach((button,index)=>{
         const point=projectBeacon(destinations[button.dataset.world].point);if(point.depth<.1)return;
         const level=beaconLevels[index],tint=beaconPalette[button.dataset.world],fade=1-smoothstep(.08,.24,journey);
-        const x=point.x*dpr,y=point.y*dpr,r=Math.max(.7,(2.15+11*level)*20/point.depth*dpr*.5);
-        const color=tint.map((v,axis)=>Math.round(lerp([.82,.88,1][axis],v,level*.75)*255)).join(',');
-        const light=ctx.createRadialGradient(x,y,0,x,y,r*2.2);
-        light.addColorStop(0,'rgba('+color+','+(.5+.5*level)*fade+')');
-        light.addColorStop(.24,'rgba('+color+','+(.18+.34*level)*fade+')');
+        const x=point.x*dpr,y=point.y*dpr,scale=clamp(20/point.depth,.95,1.6),r=(36+20*level)*scale*dpr*.5;
+        const color=tint.map((v,axis)=>Math.round(lerp([.90,.94,1][axis],v,.65+level*.15)*255)).join(',');
+        const light=ctx.createRadialGradient(x,y,0,x,y,r);
+        light.addColorStop(0,'rgba('+color+','+(.88+.12*level)*fade+')');
+        light.addColorStop(.20,'rgba('+color+','+(.24+.30*level)*fade+')');
         light.addColorStop(1,'rgba('+color+',0)');
         ctx.fillStyle=light;ctx.beginPath();ctx.arc(x,y,r*2.2,0,TAU);ctx.fill();
       });
