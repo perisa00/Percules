@@ -100,8 +100,8 @@
           beaconData[base+axis]=point[axis];
           beaconData[base+3+axis]=layer?tint[axis]:lerp([.90,.94,1][axis],tint[axis],.65+level*.15);
         }
-        beaconData[base+6]=layer?24+18*level:7+5*level;
-        beaconData[base+7]=(layer?.22+.40*level:2.35+2.8*level)*fade;
+        beaconData[base+6]=layer?36+20*level:12+6*level;
+        beaconData[base+7]=(layer?.40+.60*level:3.4+3.2*level)*fade;
       }
     });
   }
@@ -336,7 +336,7 @@
           float stellarScale=mix(20.,2.8,smoothstep(.035,.28,uJourney));
           float size=aSize*uDpr*(uLocal>.5?.024:stellarScale)/max(-v.z,.00001);
           // Destinations remain readable in the wide view, including narrow phones.
-          if(uBeacon>.5)size=aSize*uDpr*clamp(stellarScale/max(-v.z,.00001),.85,1.6);
+          if(uBeacon>.5)size=aSize*uDpr*clamp(stellarScale/max(-v.z,.00001),.95,1.6);
           gl_PointSize=clamp(size,.65,uLocal>.5?7.:(uBeacon>.5?64.:12.));
           if(-v.z<uNear)gl_PointSize=0.;
         }
@@ -695,7 +695,7 @@
       if(journey<.24)galaxyMarkers.forEach((button,index)=>{
         const point=projectBeacon(destinations[button.dataset.world].point);if(point.depth<.1)return;
         const level=beaconLevels[index],tint=beaconPalette[button.dataset.world],fade=1-smoothstep(.08,.24,journey);
-        const x=point.x*dpr,y=point.y*dpr,scale=clamp(20/point.depth,.85,1.6),r=(24+18*level)*scale*dpr*.5;
+        const x=point.x*dpr,y=point.y*dpr,scale=clamp(20/point.depth,.95,1.6),r=(36+20*level)*scale*dpr*.5;
         const color=tint.map((v,axis)=>Math.round(lerp([.90,.94,1][axis],v,.65+level*.15)*255)).join(',');
         const light=ctx.createRadialGradient(x,y,0,x,y,r);
         light.addColorStop(0,'rgba('+color+','+(.88+.12*level)*fade+')');
