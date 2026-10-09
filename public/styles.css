@@ -133,13 +133,13 @@ body[data-world="contact"]{--accent:#ffe0b7;--line:#e8c9a12c}
 .galaxy-destination[data-side="left"]{justify-content:flex-end}
 .galaxy-destination b{display:none}
 .sun-marker.galaxy-destination .marker-dot{display:block;flex:0 0 5px;width:5px;height:5px;background:var(--destination-color);border-radius:50%;box-shadow:0 0 6px var(--destination-color)}
-.galaxy-destination[data-world="studio"],.galaxy-star[data-world="studio"]{--destination-color:#d2e4ff}
-.galaxy-destination[data-world="websites"],.galaxy-star[data-world="websites"]{--destination-color:#80b4ff}
-.galaxy-destination[data-world="apps"],.galaxy-star[data-world="apps"]{--destination-color:#7df2d5}
-.galaxy-destination[data-world="support"],.galaxy-star[data-world="support"]{--destination-color:#d2daea}
-.galaxy-destination[data-world="process"],.galaxy-star[data-world="process"]{--destination-color:#bab2ff}
-.galaxy-destination[data-world="projects"],.galaxy-star[data-world="projects"]{--destination-color:#e7a4ff}
-.galaxy-destination[data-world="contact"],.galaxy-star[data-world="contact"]{--destination-color:#ffd18e}
+.galaxy-destination[data-world="studio"]{--destination-color:#d2e4ff}
+.galaxy-destination[data-world="websites"]{--destination-color:#80b4ff}
+.galaxy-destination[data-world="apps"]{--destination-color:#7df2d5}
+.galaxy-destination[data-world="support"]{--destination-color:#d2daea}
+.galaxy-destination[data-world="process"]{--destination-color:#bab2ff}
+.galaxy-destination[data-world="projects"]{--destination-color:#e7a4ff}
+.galaxy-destination[data-world="contact"]{--destination-color:#ffd18e}
 .sun-marker.galaxy-destination:hover .marker-dot{box-shadow:0 0 8px var(--destination-color)}
 .galaxy-destination:hover,.galaxy-destination:focus-visible{background:transparent;color:#fff;text-shadow:0 0 16px #aacfff70}
 .galaxy-destination:focus-visible{outline:1px solid #c3d7ff;outline-offset:2px}
@@ -199,18 +199,8 @@ body[data-scene="system"] .view-controls .reset-button{display:none}
 #galaxy-destinations .galaxy-destination{position:relative;left:auto;top:auto;transform:none;width:auto;flex:0 0 auto;min-height:44px;justify-content:center;padding:0 6px;gap:8px;color:var(--destination-color);letter-spacing:.7px}
 #galaxy-destinations .galaxy-destination:hover,#galaxy-destinations .galaxy-destination[data-highlighted="true"]{color:var(--destination-color);text-shadow:0 0 14px var(--destination-color)}
 #galaxy-destinations .galaxy-destination[data-highlighted="true"] .marker-dot{box-shadow:0 0 12px var(--destination-color)}
-.galaxy-star{--destination-color:#d2e4ff;visibility:hidden;pointer-events:none}
-#galaxy-connectors .star-core{visibility:inherit;fill:var(--destination-color);stroke:none;transition:r .18s,opacity .18s;opacity:.8}
-#galaxy-connectors .star-white{visibility:inherit;fill:#fff;stroke:none;opacity:.6;transition:opacity .18s}
-#galaxy-connectors .star-halo{visibility:inherit;fill:var(--destination-color);stroke:none;opacity:0;filter:url(#star-soft);transition:opacity .22s}
-#galaxy-connectors .star-rays{visibility:inherit;fill:var(--destination-color);stroke:none;opacity:0;transition:opacity .18s}
-#galaxy-connectors .galaxy-star[data-active="true"] .star-core{r:4px;opacity:1}
-#galaxy-connectors .galaxy-star[data-active="true"] .star-white{opacity:1}
-#galaxy-connectors .galaxy-star[data-active="true"] .star-halo{opacity:.55}
-#galaxy-connectors .galaxy-star[data-active="true"] .star-rays{opacity:.85}
 body[data-flight="active"] #galaxy-destinations,body[data-flight="aligning"] #galaxy-destinations{opacity:0;pointer-events:none}
 body[data-flight="active"] #galaxy-destinations button,body[data-flight="aligning"] #galaxy-destinations button{pointer-events:none}
 @media(max-width:800px){#galaxy-destinations{inset:110px 18px auto;column-gap:12px}#galaxy-destinations .galaxy-destination{font-size:10px;letter-spacing:.4px;padding:0 3px;gap:6px}}
 @media(max-width:380px){#galaxy-destinations{column-gap:10px}#galaxy-destinations .galaxy-destination{font-size:9px;letter-spacing:.25px}}
 @media(max-height:550px){#galaxy-destinations{top:90px;column-gap:16px}}
-@media(prefers-reduced-motion:reduce){#galaxy-connectors .galaxy-star circle,#galaxy-connectors .galaxy-star path{transition:none}}

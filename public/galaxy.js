@@ -67,6 +67,7 @@
       button.dataset.highlighted=String(active);
       el('star-'+button.dataset.world).dataset.active=String(active);
     }
+    wake();
   }
   function probeGalaxy(x,y){
     let nearest=null,distance=22;
@@ -75,6 +76,33 @@
       if(delta<distance){distance=delta;nearest=point.id;}
     }
     pointedWorld=nearest;updateBeaconLight();
+  }
+  const beaconLevels=new Float32Array(galaxyMarkers.length),beaconData=new Float32Array(galaxyMarkers.length*16);
+  const beaconPalette={studio:[.824,.894,1],websites:[.502,.706,1],apps:[.490,.949,.835],support:[.824,.855,.918],process:[.729,.698,1],projects:[.906,.643,1],contact:[1,.820,.557]};
+  let beaconFading=false;
+  function updateStellarBeacons(dt){
+    beaconFading=false;
+    const blend=motion.matches?1:1-Math.exp(-dt*12),fade=1-smoothstep(.08,.24,journey);
+    galaxyMarkers.forEach((button,index)=>{
+      const target=button.dataset.world===litWorld?1:0;
+      let level=lerp(beaconLevels[index],target,blend);
+      if(Math.abs(level-target)<.002)level=target;else beaconFading=true;
+      beaconLevels[index]=level;
+      const point=destinations[button.dataset.world].point,tint=beaconPalette[button.dataset.world],offset=index*16;
+      for(let layer=0;layer<2;layer++){
+        const base=offset+layer*8;
+        for(let axis=0;axis<3;axis++){
+          beaconData[base+axis]=point[axis];
+          beaconData[base+3+axis]=layer?tint[axis]:lerp([.82,.88,1][axis],tint[axis],level*.75);
+        }
+        beaconData[base+6]=layer?9+18*level:1.65+6*level;
+        beaconData[base+7]=(layer?.10*level:.36+1.55*level)*fade;
+      }
+    });
+  }
+  function projectBeacon(point){
+    const p=flowPoint(point),x=p[0]-center[0],y=p[1]-center[1],z=p[2]-center[2],a=x*Math.cos(yaw)-z*Math.sin(yaw),b=x*Math.sin(yaw)+z*Math.cos(yaw),v=y*Math.cos(pitch)-b*Math.sin(pitch),depth=worldDistance-y*Math.sin(pitch)-b*Math.cos(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
+    return {x:width/2+(a*cr-v*sr)*height*1.2071/depth,y:height/2-(a*sr+v*cr)*height*1.2071/depth,depth};
   }
   let solarPoint=[...destinations.studio.point];const solarScale=.00008;
   let solarAnchor=[...solarPoint];
@@ -286,7 +314,7 @@
       precision highp float;
       attribute vec3 aPosition,aColor;
       attribute float aSize,aStrength;
-      uniform float uDpr,uBackground,uTime,uEnergy,uLocal,uZoom,uJourney;
+      uniform float uDpr,uBackground,uTime,uEnergy,uLocal,uZoom,uJourney,uBeacon;
       varying vec3 vColor;
       varying float vStrength,vSparkle;
       ${transform}
@@ -300,11 +328,11 @@
         }else{
           gl_Position=project(v);
           float stellarScale=mix(20.,2.8,smoothstep(.035,.28,uJourney));
-          gl_PointSize=clamp(aSize*uDpr*(uLocal>.5?.024:stellarScale)/max(-v.z,.00001),.65,uLocal>.5?7.:12.);
+          gl_PointSize=clamp(aSize*uDpr*(uLocal>.5?.024:stellarScale)/max(-v.z,.00001),.65,uLocal>.5?7.:(uBeacon>.5?48.:12.));
           if(-v.z<uNear)gl_PointSize=0.;
         }
         float shimmer=sin(uTime*.65+dot(aPosition,vec3(11.7,23.1,7.9)));
-        vColor=aColor;vStrength=aStrength*(uLocal>.5?smoothstep(.08,.5,1.-uZoom):1.)*(1.+shimmer*.16+uEnergy*.28);vSparkle=smoothstep(3.0,7.0,aSize);
+        vColor=aColor;vStrength=aStrength*(uLocal>.5?smoothstep(.08,.5,1.-uZoom):1.)*(1.+shimmer*.16+uEnergy*.28);vSparkle=uBeacon>.5?0.:smoothstep(3.0,7.0,aSize);
       }
     `, `
       precision mediump float;
@@ -450,7 +478,8 @@
     `);
     const volumePosition=gl.getAttribLocation(volumeProgram,'aPosition'),volumeCopyPosition=gl.getAttribLocation(volumeCopyProgram,'aPosition'),volumeCopySource=gl.getUniformLocation(volumeCopyProgram,'uSource');
     function buffer(data){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return b;}
-    const starsBuffer=buffer(stars),skyBuffer=buffer(sky);
+    const starsBuffer=buffer(stars),skyBuffer=buffer(sky),beaconBuffer=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,beaconBuffer);gl.bufferData(gl.ARRAY_BUFFER,beaconData.byteLength,gl.DYNAMIC_DRAW);
     const nearby=[];
     for(let i=0;i<(coarse?650:1200);i++){
       const r=Math.exp(lerp(Math.log(.035),Math.log(1.9),random())),a=random()*TAU,h=(random()*2-1)*.7;
@@ -466,7 +495,7 @@
     const diskBuffer=buffer(diskMesh);
     const screenBuffer=buffer([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]);
     const uniforms=new Map();
-    [pointProgram,diskProgram,glowProgram,volumeProgram].forEach(p=>{const u={};['uNoise','uFogStrength','uAnchor','uNear','uFraming','uLocal','uDiskDetail','uJourney','uCenter','uYaw','uPitch','uDistance','uAspect','uRoll','uDpr','uBackground','uZoom','uTexture','uTextureMix','uLayer','uLayerWeight','uEnergy','uTime','uBreath','uCompression','uFlowPull'].forEach(key=>u[key]=gl.getUniformLocation(p,key));uniforms.set(p,u);});
+    [pointProgram,diskProgram,glowProgram,volumeProgram].forEach(p=>{const u={};['uBeacon','uNoise','uFogStrength','uAnchor','uNear','uFraming','uLocal','uDiskDetail','uJourney','uCenter','uYaw','uPitch','uDistance','uAspect','uRoll','uDpr','uBackground','uZoom','uTexture','uTextureMix','uLayer','uLayerWeight','uEnergy','uTime','uBreath','uCompression','uFlowPull'].forEach(key=>u[key]=gl.getUniformLocation(p,key));uniforms.set(p,u);});
     let textureBlend=0,textureReady=false;
     const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
@@ -508,7 +537,7 @@
     function use(p){
       gl.useProgram(p);const u=uniforms.get(p);
       const volumeBlend=postAvailable?Math.max(smoothstep(.015,.15,journey),1-smoothstep(.2,.58,pitch)):0;
-      gl.uniform1f(u.uYaw,yaw);gl.uniform1f(u.uPitch,pitch);gl.uniform1f(u.uDistance,worldDistance);gl.uniform3fv(u.uCenter,center);gl.uniform3fv(u.uAnchor,solarAnchor);gl.uniform1f(u.uNear,Math.max(.0000001,worldDistance*.0002));gl.uniform1f(u.uFraming,worldFraming);gl.uniform1f(u.uJourney,journey);gl.uniform1f(u.uDiskDetail,(1-volumeBlend)*(1-smoothstep(.28,.68,journey)));gl.uniform1f(u.uFogStrength,volumeBlend*(1-smoothstep(.42,.72,journey)));gl.uniform1f(u.uLocal,0);
+      gl.uniform1f(u.uYaw,yaw);gl.uniform1f(u.uPitch,pitch);gl.uniform1f(u.uDistance,worldDistance);gl.uniform3fv(u.uCenter,center);gl.uniform3fv(u.uAnchor,solarAnchor);gl.uniform1f(u.uNear,Math.max(.0000001,worldDistance*.0002));gl.uniform1f(u.uFraming,worldFraming);gl.uniform1f(u.uJourney,journey);gl.uniform1f(u.uDiskDetail,(1-volumeBlend)*(1-smoothstep(.28,.68,journey)));gl.uniform1f(u.uFogStrength,volumeBlend*(1-smoothstep(.42,.72,journey)));gl.uniform1f(u.uLocal,0);gl.uniform1f(u.uBeacon,0);
       gl.uniform1f(u.uAspect,width/height);gl.uniform1f(u.uRoll,cameraRoll);gl.uniform1f(u.uDpr,dpr);gl.uniform1f(u.uZoom,zoom);
       gl.uniform1f(u.uEnergy,effectEnergy);gl.uniform1f(u.uTime,motion.matches?0:effectTime);
       gl.uniform1f(u.uBreath,breath);gl.uniform1f(u.uCompression,compression);gl.uniform1f(u.uFlowPull,flowPull);
@@ -617,6 +646,10 @@
         attributes([[volumeCopyPosition,2,0,0]]);gl.drawArrays(gl.TRIANGLES,0,6);
       }
       u=use(pointProgram);gl.uniform1f(u.uBackground,0);gl.bindBuffer(gl.ARRAY_BUFFER,starsBuffer);attributes(pointLayout);gl.drawArrays(gl.POINTS,0,stars.length/8);
+      if(journey<.24){
+        gl.uniform1f(u.uBeacon,1);gl.bindBuffer(gl.ARRAY_BUFFER,beaconBuffer);gl.bufferSubData(gl.ARRAY_BUFFER,0,beaconData);
+        attributes(pointLayout);gl.drawArrays(gl.POINTS,0,beaconData.length/8);gl.uniform1f(u.uBeacon,0);
+      }
       if(journey>.08){gl.uniform1f(u.uLocal,1);gl.bindBuffer(gl.ARRAY_BUFFER,nearbyBuffer);attributes(pointLayout);gl.drawArrays(gl.POINTS,0,nearby.length/8);}
       if(postAvailable){
         gl.disable(gl.BLEND);
@@ -650,6 +683,17 @@
         ctx.fillStyle=`rgba(${Math.round(stars[i+3]*255)},${Math.round(stars[i+4]*255)},${Math.round(stars[i+5]*255)},${stars[i+7]})`;
         ctx.fillRect(px,py,size,size);
       }
+      if(journey<.24)galaxyMarkers.forEach((button,index)=>{
+        const point=projectBeacon(destinations[button.dataset.world].point);if(point.depth<.1)return;
+        const level=beaconLevels[index],tint=beaconPalette[button.dataset.world],fade=1-smoothstep(.08,.24,journey);
+        const x=point.x*dpr,y=point.y*dpr,r=Math.max(.7,(1.65+6*level)*20/point.depth*dpr*.5);
+        const color=tint.map((v,axis)=>Math.round(lerp([.82,.88,1][axis],v,level*.75)*255)).join(',');
+        const light=ctx.createRadialGradient(x,y,0,x,y,r*2.2);
+        light.addColorStop(0,'rgba('+color+','+(.4+.5*level)*fade+')');
+        light.addColorStop(.24,'rgba('+color+','+(.14+.24*level)*fade+')');
+        light.addColorStop(1,'rgba('+color+',0)');
+        ctx.fillStyle=light;ctx.beginPath();ctx.arc(x,y,r*2.2,0,TAU);ctx.fill();
+      });
       ctx.globalCompositeOperation='source-over';
     };
     canvas.dataset.renderer='canvas';
@@ -735,35 +779,24 @@
       worldDistance=view.distance*solarScale;center=view.target.map((v,i)=>solarAnchor[i]+v*solarScale);worldFraming=view.framing;
     }
     // Both layers remain present. The local canvas has no separate background.
-    canvas.style.opacity='1';solarCanvas.style.opacity='1';draw();
+    canvas.style.opacity='1';solarCanvas.style.opacity='1';updateStellarBeacons(dt);draw();
     if(solar){try{solar.render({dt,yaw,pitch,roll:cameraRoll,progress:journey,reducedMotion:motion.matches||!breathingEnabled,quality,viewPrepared:true});}catch(e){console.error('Solar frame failed:',e);solar=null;solarLoading=null;focusedBody=null;flight=null;jumpProgress=-1;planetNav.replaceChildren();el('planet-labels').replaceChildren();toZoom=1;error.textContent='Detaljan prikaz je prekinut. Pokušajte ponovo dugmetom Istraži.';error.hidden=false;}}
     drawHyperspace(time);
     shieldRenderer?.render(shieldAge,width,height,dpr);
     updateScene(flight||worldFlight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
     canvas.dataset.journey=journey>.995?'arrived':journey<.005?'galaxy':'travel';canvas.dataset.navigation=alignment?'centering':flight?'jump':arrival?'braking':'continuous';
     const goal=flightOrigin();canvas.dataset.targetOffset=Math.hypot(...goal).toFixed(6);
-    const projectMap=point=>{
-      const x=point[0]-center[0],y=point[1]-center[1],z=point[2]-center[2],a=x*Math.cos(yaw)-z*Math.sin(yaw),b=x*Math.sin(yaw)+z*Math.cos(yaw),v=y*Math.cos(pitch)-b*Math.sin(pitch),depth=worldDistance-y*Math.sin(pitch)-b*Math.cos(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
-      return {x:width/2+(a*cr-v*sr)*height*1.2071/depth,y:height/2-(a*sr+v*cr)*height*1.2071/depth,depth};
-    };
     mapPoints=galaxyMarkers.map(beacon=>({
       id:beacon.dataset.world,name:destinations[beacon.dataset.world].name,
-      ...projectMap(flowPoint(destinations[beacon.dataset.world].point))
+      ...projectBeacon(destinations[beacon.dataset.world].point)
     }));
-    el('galaxy-connectors').setAttribute('viewBox','0 0 '+width+' '+height);
-    el('galaxy-connectors').hidden=journey>.70;
     el('galaxy-destinations').hidden=journey>.70;
-    for(const point of mapPoints){
-      const beacon=el(destinations[point.id].marker),star=el('star-'+point.id);
-      beacon.hidden=journey>.70;
-      star.style.visibility=journey>.70||point.depth<=0?'hidden':'visible';
-      star.setAttribute('transform','translate('+point.x.toFixed(1)+' '+point.y.toFixed(1)+')');
-    }
+    for(const button of galaxyMarkers)button.hidden=journey>.70;
     if(pendingSelection&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){
       const destination=pendingSelection;pendingSelection=null;changeWorld(destination.world,destination.id);
     }
     const unsettled=Math.abs(toYaw-yaw)+Math.abs(toPitch-pitch)+Math.abs(toZoom-zoom)+Math.abs(vx)+Math.abs(vy)>.0001;
-    if(!frameId&&(shieldAge>=0||teleportEnergy>.001||flight||worldFlight||pendingSelection||alignment||arrival||breathingEnabled||pointers.size||unsettled||effectEnergy>.0001||compression>.0001||Math.abs(flowPull)+Math.abs(flowVelocity)>.0001||Math.abs(cameraRoll+.20)>.00001))frameId=requestAnimationFrame(frame);
+    if(!frameId&&(beaconFading||shieldAge>=0||teleportEnergy>.001||flight||worldFlight||pendingSelection||alignment||arrival||breathingEnabled||pointers.size||unsettled||effectEnergy>.0001||compression>.0001||Math.abs(flowPull)+Math.abs(flowVelocity)>.0001||Math.abs(cameraRoll+.20)>.00001))frameId=requestAnimationFrame(frame);
   }
   function wake(){if(!frameId&&!document.hidden&&!lost)frameId=requestAnimationFrame(frame);}
   function interact(){wake();}

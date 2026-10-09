@@ -6,7 +6,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const source=fs.readFileSync('public/solar.js','utf8');
-const shaderPairs=[],draws=[];
+const shaderPairs=[],draws=[],uploads=[];
 let currentSources=[],id=0;
 const gl=new Proxy({
 VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,
@@ -14,7 +14,7 @@ getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
 getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:()=>({}),
-createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
+bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
 function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
 setAttribute(){},addEventListener(type,fn){this.listeners[type]=fn;},replaceChildren(){this.children=[];},
@@ -84,35 +84,23 @@ solar.activate('uranus');assert.equal(solar.focusId(),'uranus');
 solar.clearFocus();solar.zoom(-3000);assert.equal(solar.isFocused(),false,'Overview zoom must not auto-select');
 solar.setWorld('projects');solar.activate('milica-portal');assert.equal(portals.at(-1),'milica');
 assert.equal(solar.isFocused(),false);
-if(process.argv.includes('--shaders')){
-const directory=fs.mkdtempSync(path.join(os.tmpdir(),'percules-shaders-'));
-for(let index=0;index<shaderPairs.length;index++){
-const files=shaderPairs[index].map(shader=>{
-const filename=path.join(directory,'program-'+index+(shader.type===35633?'.vert':'.frag'));
-fs.writeFileSync(filename,shader.source);return filename;
-});
-const result=spawnSync('glslangValidator',['-l',...files],{encoding:'utf8'});
-assert.equal(result.status,0,'Shader '+index+' failed:\n'+result.stdout+'\n'+result.stderr);
-}
-console.log('Validated '+shaderPairs.length+' WebGL shader pairs.');
-}
 console.log('Studio checks passed: seven separate galactic worlds, pink system, mobile camera at 30/60/120 FPS, rendering, content and contact.');
 
-async function checkNavigation(reduced,coarse=false){
+async function checkNavigation(reduced,coarse=false,useWebGL=false){
   let now=0,sequence=0;
   const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar;
   const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
   function node(id){
     if(nodes.has(id))return nodes.get(id);
     const el=element();el.id=id;const destination=Object.entries(context.PerculesDestinations||{}).find(([,d])=>d.marker===id);if(destination)el.dataset.world=destination[0];el.classList={add(){},remove(){}};el.focus=()=>{};
-    el.getContext=type=>type==='2d'?ctx2d:null;el.removeAttribute=()=>{};el.setPointerCapture=()=>{};
+    el.getContext=type=>type==='2d'?ctx2d:(useWebGL?gl:null);el.removeAttribute=()=>{};el.setPointerCapture=()=>{};
     el.querySelector=()=>node(id+'-child');el.querySelectorAll=()=>el.children;nodes.set(id,el);return el;
   }
   const body={dataset:{}};
   const document={body,hidden:false,getElementById:node,createElement:()=>element(),
     addEventListener:(type,fn)=>{if(!events.has(type))events.set(type,[]);events.get(type).push(fn);},
     dispatchEvent:event=>{if(event.type==='percules:scene')sceneEvents.push(event.detail);if(event.type==='percules:hover')hoverEvents.push(event.detail);for(const fn of events.get(event.type)||[])fn(event);}};
-  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,
+  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,Image:function(){},
     document,innerWidth:390,innerHeight:844,devicePixelRatio:1,
     matchMedia:query=>({matches:query.includes('reduced-motion')?reduced:coarse,addEventListener(){}}),
     performance:{now:()=>now},CustomEvent:function(type,options){this.type=type;this.detail=options?.detail;},
@@ -127,12 +115,21 @@ async function checkNavigation(reduced,coarse=false){
   const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
-  tick(1);
+  tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
   const websiteLabel=node('destination-websites'),websiteStar=node('star-websites');
   websiteLabel.listeners.pointerenter();assert.equal(websiteStar.dataset.active,'true');
+  if(useWebGL){
+    node('galaxy').listeners.keydown({key:' ',preventDefault(){}});
+    const index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites'),base=index*16;
+    tick(45);const lit=uploads.filter(data=>data.length===112).at(-1);
+    assert.ok(lit,'Destination lights must reach the galaxy GPU buffer');
+    assert.ok(lit[base+7]>1.8,'Hover should smoothly brighten the actual rendered star');
+    const expected=Object.values(context.PerculesDestinations).find(d=>d.marker==='destination-websites').point;assert.ok(lit.slice(base,base+3).every((v,i)=>Math.abs(v-expected[i])<.00001),'Light stays at its 3D destination');
+  }
   assert.equal(node('star-contact').dataset.active,'false','Highlight the matching star only');
   assert.equal(body.dataset.scene,'galaxy','Hover must not begin navigation');
   websiteLabel.listeners.pointerleave();assert.equal(websiteStar.dataset.active,'false','Clear star after leaving the label');
+  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-.36)<.002,'Rendered light must settle after leaving, including with breathing paused');}
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
@@ -184,4 +181,20 @@ function checkTouch(){
  console.log('Touch checks passed: panel scrolling, edge containment, galaxy drag and multi-touch.');
 }
 checkTouch();
-checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>console.log('Navigation checks passed: stage-two arrivals, object preview and selection, touch/drag/pinch, pink project portal, return, reduced motion and single frame loop.')).catch(error=>{console.error(error);process.exitCode=1;});
+checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true)).then(()=>{checkShaders();console.log('Navigation checks passed: stage-two arrivals, object preview and selection, touch/drag/pinch, pink project portal, return, reduced motion and single frame loop.');}).catch(error=>{console.error(error);process.exitCode=1;});
+
+function checkShaders(){
+assert.ok(shaderPairs.length>6,'Galaxy shaders must be captured alongside planetary shaders');
+if(process.argv.includes('--shaders')){
+const directory=fs.mkdtempSync(path.join(os.tmpdir(),'percules-shaders-'));
+for(let index=0;index<shaderPairs.length;index++){
+const files=shaderPairs[index].map(shader=>{
+const filename=path.join(directory,'program-'+index+(shader.type===35633?'.vert':'.frag'));
+fs.writeFileSync(filename,shader.source);return filename;
+});
+const result=spawnSync('glslangValidator',['-l',...files],{encoding:'utf8'});
+assert.equal(result.status,0,'Shader '+index+' failed:\n'+result.stdout+'\n'+result.stderr);
+}
+console.log('Validated '+shaderPairs.length+' WebGL shader pairs.');
+}
+}
