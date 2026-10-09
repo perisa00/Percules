@@ -779,7 +779,7 @@
       worldDistance=view.distance*solarScale;center=view.target.map((v,i)=>solarAnchor[i]+v*solarScale);worldFraming=view.framing;
     }
     // Both layers remain present. The local canvas has no separate background.
-    canvas.style.opacity='1';solarCanvas.style.opacity='1';draw();
+    canvas.style.opacity='1';solarCanvas.style.opacity='1';updateStellarBeacons(dt);draw();
     if(solar){try{solar.render({dt,yaw,pitch,roll:cameraRoll,progress:journey,reducedMotion:motion.matches||!breathingEnabled,quality,viewPrepared:true});}catch(e){console.error('Solar frame failed:',e);solar=null;solarLoading=null;focusedBody=null;flight=null;jumpProgress=-1;planetNav.replaceChildren();el('planet-labels').replaceChildren();toZoom=1;error.textContent='Detaljan prikaz je prekinut. Pokušajte ponovo dugmetom Istraži.';error.hidden=false;}}
     drawHyperspace(time);
     shieldRenderer?.render(shieldAge,width,height,dpr);

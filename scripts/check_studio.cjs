@@ -6,7 +6,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const source=fs.readFileSync('public/solar.js','utf8');
-const shaderPairs=[],draws=[];
+const shaderPairs=[],draws=[],uploads=[];
 let currentSources=[],id=0;
 const gl=new Proxy({
 VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,
@@ -14,7 +14,7 @@ getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
 getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:()=>({}),
-createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
+bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
 function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
 setAttribute(){},addEventListener(type,fn){this.listeners[type]=fn;},replaceChildren(){this.children=[];},
@@ -118,9 +118,18 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
   const websiteLabel=node('destination-websites'),websiteStar=node('star-websites');
   websiteLabel.listeners.pointerenter();assert.equal(websiteStar.dataset.active,'true');
+  if(useWebGL){
+    node('galaxy').listeners.keydown({key:' ',preventDefault(){}});
+    const index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites'),base=index*16;
+    tick(45);const lit=uploads.filter(data=>data.length===112).at(-1);
+    assert.ok(lit,'Destination lights must reach the galaxy GPU buffer');
+    assert.ok(lit[base+7]>1.8,'Hover should smoothly brighten the actual rendered star');
+    const expected=Object.values(context.PerculesDestinations).find(d=>d.marker==='destination-websites').point;assert.ok(lit.slice(base,base+3).every((v,i)=>Math.abs(v-expected[i])<.00001),'Light stays at its 3D destination');
+  }
   assert.equal(node('star-contact').dataset.active,'false','Highlight the matching star only');
   assert.equal(body.dataset.scene,'galaxy','Hover must not begin navigation');
   websiteLabel.listeners.pointerleave();assert.equal(websiteStar.dataset.active,'false','Clear star after leaving the label');
+  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-.36)<.002,'Rendered light must settle after leaving, including with breathing paused');}
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
