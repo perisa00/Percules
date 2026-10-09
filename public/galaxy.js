@@ -51,7 +51,7 @@
   let breathPhase = 0, breath = 0, compression = 0, flowPull = 0, flowVelocity = 0;
   let frameId = 0, previousTime = 0, lost = false;
   let pointers = new Map(), lastPinch = 0;
-  const labelPositions=new Map();
+  let mapPoints=[],hoveredWorld=null,focusedWorld=null,pointedWorld=null,litWorld=null;
   let draw, resizeRenderer;
   let flight=null,alignment=null,arrival=null,navigationTarget=null,pendingTeleport=false,teleportEnergy=0,worldDistance=20,worldFraming=0;
   let worldFlight=null,pendingSelection=null;
@@ -59,6 +59,23 @@
   const el=id=>document.getElementById(id),solarCanvas=el('solar'),marker=el('sun-marker'),planetNav=el('planet-nav');
   const destinations=globalThis.PerculesDestinations;
   const galaxyMarkers=Object.values(destinations).filter(d=>d.marker).map(d=>el(d.marker));
+  function updateBeaconLight(){
+    const next=hoveredWorld||focusedWorld||pointedWorld;
+    if(next===litWorld)return;litWorld=next;
+    for(const button of galaxyMarkers){
+      const active=button.dataset.world===next;
+      button.dataset.highlighted=String(active);
+      el('star-'+button.dataset.world).dataset.active=String(active);
+    }
+  }
+  function probeGalaxy(x,y){
+    let nearest=null,distance=22;
+    for(const point of mapPoints)if(point.depth>0){
+      const delta=Math.hypot(point.x-x,point.y-y);
+      if(delta<distance){distance=delta;nearest=point.id;}
+    }
+    pointedWorld=nearest;updateBeaconLight();
+  }
   let solarPoint=[...destinations.studio.point];const solarScale=.00008;
   let solarAnchor=[...solarPoint];
   function sound(detail){if(typeof CustomEvent!=='undefined')document.dispatchEvent?.(new CustomEvent('percules:audio',{detail}));}
@@ -729,49 +746,18 @@
       const x=point[0]-center[0],y=point[1]-center[1],z=point[2]-center[2],a=x*Math.cos(yaw)-z*Math.sin(yaw),b=x*Math.sin(yaw)+z*Math.cos(yaw),v=y*Math.cos(pitch)-b*Math.sin(pitch),depth=worldDistance-y*Math.sin(pitch)-b*Math.cos(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
       return {x:width/2+(a*cr-v*sr)*height*1.2071/depth,y:height/2-(a*sr+v*cr)*height*1.2071/depth,depth};
     };
-    const mapPoints=galaxyMarkers.map(beacon=>({
-      id:beacon.dataset.world,name:destinations[beacon.dataset.world].name,previousSide:labelPositions.get(beacon.dataset.world)?.side,
+    mapPoints=galaxyMarkers.map(beacon=>({
+      id:beacon.dataset.world,name:destinations[beacon.dataset.world].name,
       ...projectMap(flowPoint(destinations[beacon.dataset.world].point))
     }));
-    const silhouette=[];
-    for(let i=0;i<32;i++){
-      const angle=i*Math.PI/16;
-      for(const elevation of [-.25,.25])silhouette.push(projectMap(flowPoint([8.5*Math.cos(angle),elevation,8.5*Math.sin(angle)])));
-    }
-    const boundary=globalThis.PerculesMapLabels.outline(silhouette);
-    const layout=globalThis.PerculesMapLabels.layout(mapPoints,width,height,boundary);
     el('galaxy-connectors').setAttribute('viewBox','0 0 '+width+' '+height);
     el('galaxy-connectors').hidden=journey>.70;
-    const displayed=layout.map(point=>{
-      const previous=labelPositions.get(point.id)||point,blend=motion.matches?1:1-Math.exp(-dt*12);
-      let x=lerp(previous.labelX,point.labelX,blend),y=lerp(previous.labelY,point.labelY,blend);
-      if(!globalThis.PerculesMapLabels.outside(x,y,point.width,boundary)){x=point.labelX;y=point.labelY;}
-      return {...point,displayX:x,displayY:y};
-    });
-    // Resolve intermediate collisions when two callouts exchange exterior slots.
-    for(let pass=0;pass<displayed.length;pass++){
-      let changed=false;
-      for(let i=0;i<displayed.length;i++)for(let j=i+1;j<displayed.length;j++){
-        const a=displayed[i],b=displayed[j];
-        if(Math.abs(a.displayY-b.displayY)<32&&a.displayX<b.width+b.displayX&&b.displayX<a.width+a.displayX){
-          if(a.displayX!==a.labelX||a.displayY!==a.labelY||b.displayX!==b.labelX||b.displayY!==b.labelY)changed=true;
-          a.displayX=a.labelX;a.displayY=a.labelY;b.displayX=b.labelX;b.displayY=b.labelY;
-        }
-      }
-      if(!changed)break;
-    }
-    for(const point of displayed){
-      const beacon=el(destinations[point.id].marker),line=el('connector-'+point.id),pin=el('pin-'+point.id);
-      beacon.hidden=journey>.70||point.depth<=0||!globalThis.PerculesMapLabels.outside(point.labelX,point.labelY,point.width,boundary);
-      line.style.visibility=pin.style.visibility=beacon.hidden?'hidden':'visible';
-      if(!beacon.hidden){
-        const x=point.displayX,y=point.displayY;
-        labelPositions.set(point.id,{labelX:x,labelY:y,side:point.side});
-        beacon.dataset.side=point.side;beacon.style.width=point.width+'px';beacon.style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
-        const endX=point.side==='left'?x+point.width:x,endY=y+22,elbowX=endX+(point.side==='left'?18:-18);
-        line.setAttribute('d','M '+point.x.toFixed(1)+' '+point.y.toFixed(1)+' L '+elbowX.toFixed(1)+' '+endY.toFixed(1)+' L '+endX.toFixed(1)+' '+endY.toFixed(1));
-        pin.setAttribute('cx',point.x.toFixed(1));pin.setAttribute('cy',point.y.toFixed(1));
-      }
+    el('galaxy-destinations').hidden=journey>.70;
+    for(const point of mapPoints){
+      const beacon=el(destinations[point.id].marker),star=el('star-'+point.id);
+      beacon.hidden=journey>.70;
+      star.style.visibility=journey>.70||point.depth<=0?'hidden':'visible';
+      star.setAttribute('transform','translate('+point.x.toFixed(1)+' '+point.y.toFixed(1)+')');
     }
     if(pendingSelection&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){
       const destination=pendingSelection;pendingSelection=null;changeWorld(destination.world,destination.id);
@@ -783,10 +769,10 @@
   function interact(){wake();}
   function reset(){pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
   canvas.addEventListener('pointerdown',e=>{
-    if(e.button!==0)return;pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;canvas.classList.add('dragging');interact();
+    if(e.button!==0)return;pointedWorld=null;updateBeaconLight();pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;canvas.classList.add('dragging');interact();
   });
   canvas.addEventListener('pointermove',e=>{
-    const old=pointers.get(e.pointerId);if(!old){if(!coarse&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){solar.probe(e.clientX,e.clientY);wake();}return;}
+    const old=pointers.get(e.pointerId);if(!old){if(!coarse&&journey<.12&&!flight&&!alignment)probeGalaxy(e.clientX,e.clientY);if(!coarse&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){solar.probe(e.clientX,e.clientY);wake();}return;}
     const moved=old.moved||Math.hypot(e.clientX-old.startX,e.clientY-old.startY)>7;
     pointers.set(e.pointerId,{...old,x:e.clientX,y:e.clientY,time:e.timeStamp,moved});
     if(moved)solar?.clearHover();else if(pointers.size===1)return;
@@ -803,7 +789,7 @@
   function release(e){const pointer=pointers.get(e.pointerId);if(!pointer)return;const tap=e.type==='pointerup'&&!pointer.moved&&pointers.size===1&&Math.hypot(e.clientX-pointer.startX,e.clientY-pointer.startY)<=7;if(e.type!=='pointerup'||e.timeStamp-pointer.time>100)vx=vy=0;pointers.delete(e.pointerId);lastPinch=0;if(!pointers.size)canvas.classList.remove('dragging');if(tap&&journey>.98&&solar&&!focusedBody&&!flight&&!alignment&&!worldFlight){const body=solar.pick(e.clientX,e.clientY);if(body)solar.activate(body.id,e.pointerType==='touch'||coarse);}interact();}
   canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
   canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1));},{passive:false});
-  canvas.addEventListener('pointerleave',e=>{if(!pointers.size&&!coarse&&!e.relatedTarget?.closest?.('#object-preview'))solar?.clearHover();});
+  canvas.addEventListener('pointerleave',e=>{pointedWorld=null;updateBeaconLight();if(!pointers.size&&!coarse&&!e.relatedTarget?.closest?.('#object-preview'))solar?.clearHover();});
   canvas.addEventListener('dblclick',()=>{if(journey<.12)reset();});
   canvas.addEventListener('keydown',e=>{
     if(e.altKey||e.ctrlKey||e.metaKey)return;
@@ -816,7 +802,13 @@
     e.preventDefault();vx=vy=0;interact();
   });
   el('enter-solar').addEventListener('click',()=>navigate({world:'studio',id:'sun'}));
-  for(const button of [el('enter-solar'),...galaxyMarkers]){button.addEventListener('pointerenter',ensureSolar);button.addEventListener('focus',ensureSolar);}
+  el('enter-solar').addEventListener('pointerenter',ensureSolar);el('enter-solar').addEventListener('focus',ensureSolar);
+  for(const button of galaxyMarkers){
+    button.addEventListener('pointerenter',()=>{ensureSolar();hoveredWorld=button.dataset.world;updateBeaconLight();});
+    button.addEventListener('pointerleave',()=>{hoveredWorld=null;updateBeaconLight();});
+    button.addEventListener('focus',()=>{ensureSolar();focusedWorld=button.dataset.world;updateBeaconLight();});
+    button.addEventListener('blur',()=>{focusedWorld=null;updateBeaconLight();});
+  }
   for(const id of ['brand-home','back-galaxy','reset-view'])el(id).addEventListener('click',reset);
   document.addEventListener('percules:navigate',e=>navigate(e.detail||{}));
   document.addEventListener('percules:unfocus',()=>{pendingSelection=null;solar?.clearFocus();wake();});

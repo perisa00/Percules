@@ -84,41 +84,6 @@ solar.activate('uranus');assert.equal(solar.focusId(),'uranus');
 solar.clearFocus();solar.zoom(-3000);assert.equal(solar.isFocused(),false,'Overview zoom must not auto-select');
 solar.setWorld('projects');solar.activate('milica-portal');assert.equal(portals.at(-1),'milica');
 assert.equal(solar.isFocused(),false);
-const mapContext={};vm.createContext(mapContext);vm.runInContext(fs.readFileSync('public/map-labels.js','utf8'),mapContext);
-for(const [w,h] of [[390,844],[320,568],[1280,720],[844,390]]){
- const points=Array.from({length:7},(_,i)=>({id:String(i),x:w*.3+i*20,y:h*.4+i*10,depth:20}));
- const placed=mapContext.PerculesMapLabels.layout(points,w,h);assert.equal(placed.length,7);
- for(const p of placed){assert.ok(p.labelX>=0&&p.labelY>=90);assert.ok(p.labelX+p.width<=w);assert.ok(p.labelY+48<=h-50);assert.equal(p.x,points[Number(p.id)].x);}
- for(let i=0;i<7;i++)for(let j=i+1;j<7;j++){const a=placed[i],b=placed[j];assert.ok(Math.abs(a.labelY-b.labelY)>=48||a.labelX+a.width<=b.labelX||b.labelX+b.width<=a.labelX,'Map labels overlap at '+w+'x'+h);}
-}
-const closePoints=[
-{id:'studio',name:'Ko smo',x:578,y:301.5,depth:20},{id:'websites',name:'Sajtovi',x:473.9,y:257.2,depth:20},
-{id:'apps',name:'Aplikacije',x:558.9,y:341.7,depth:20},{id:'support',name:'Podrška',x:382.2,y:293.3,depth:20},
-{id:'process',name:'Način rada',x:362.2,y:258.7,depth:20},{id:'projects',name:'Projekti',x:671,y:332.7,depth:20},
-{id:'contact',name:'Kontakt',x:585.6,y:276.7,depth:20}];
-const nearby=mapContext.PerculesMapLabels.layout(closePoints,1009,588);
-for(const p of nearby){
- const edge=p.side==='left'?p.labelX+p.width:p.labelX;
- assert.ok(Math.hypot(edge-p.x,p.labelY+22-p.y)<90,'A label must stay near its galactic point');
-}
-const shifted=closePoints.map(p=>({...p,x:p.x+70}));
-const tracked=mapContext.PerculesMapLabels.layout(shifted,1009,588);
-for(const p of tracked){const before=nearby.find(a=>a.id===p.id);assert.ok(Math.abs(p.labelX-before.labelX-70)<.001,'Labels must follow the galaxy instead of fixed rails');}
-const mapper=mapContext.PerculesMapLabels;
-let failures=0;
-for(const [w,h] of [[390,844],[320,568],[1280,720],[1009,588],[844,390]]){
- for(const angle of [0,.4,.8,1.2,1.6,2,2.4,2.8]){
-  const rx=Math.min(w*.25,h*.42),ry=rx*.48;
-  const samples=Array.from({length:64},(_,i)=>{const t=i*Math.PI/32,x=rx*Math.cos(t),y=ry*Math.sin(t);return{x:w/2+x*Math.cos(angle)-y*Math.sin(angle),y:h/2+x*Math.sin(angle)+y*Math.cos(angle),depth:20}});
-  const hull=mapper.outline(samples);
-  const points=Array.from({length:7},(_,i)=>{const p=samples[i*8];return{id:String(i),name:['Studio','Sajtovi','Aplikacije','Podrška','Kako radimo','Projekti','Kontakt'][i],x:w/2+(p.x-w/2)*.55,y:h/2+(p.y-h/2)*.55,depth:20}});
-  const placed=mapper.layout(points,w,h,hull);
-  for(const p of placed){if(!mapper.outside(p.labelX,p.labelY,p.width,hull)){console.log('inside',w,h,angle,p.id);failures++;}}
-  for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++){const a=placed[i],b=placed[j];if(Math.abs(a.labelY-b.labelY)<32&&a.labelX+a.width>b.labelX&&b.labelX+b.width>a.labelX){console.log('overlap',w,h,angle,a.id,b.id);failures++;}}
- }
-}
-assert.equal(failures,0);console.log('Outside layout checks passed.');
-
 if(process.argv.includes('--shaders')){
 const directory=fs.mkdtempSync(path.join(os.tmpdir(),'percules-shaders-'));
 for(let index=0;index<shaderPairs.length;index++){
@@ -158,11 +123,20 @@ async function checkNavigation(reduced,coarse=false){
   let script=galaxy.replace("import('./solar.js?v=11')","Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)");
-  vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(fs.readFileSync('public/map-labels.js','utf8'),context);vm.runInContext(script,context);
+  vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
   const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
-  tick(1);navigate('contact','venus');for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
+  tick(1);
+  const websiteLabel=node('destination-websites'),websiteStar=node('star-websites');
+  websiteLabel.listeners.pointerenter();assert.equal(websiteStar.dataset.active,'true');
+  assert.equal(node('star-contact').dataset.active,'false','Highlight the matching star only');
+  assert.equal(body.dataset.scene,'galaxy','Hover must not begin navigation');
+  websiteLabel.listeners.pointerleave();assert.equal(websiteStar.dataset.active,'false','Clear star after leaving the label');
+  websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
+  websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
+  assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
+  navigate('contact','venus');for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
   assert.equal(body.dataset.scene,'system');assert.equal(node('scene-title').textContent,'Kontakt');
   assert.equal(localSolar.isFocused(),false,'Arrival must show the entire system');
   assert.ok(!sceneEvents.some(event=>event.scene==='planet'),'No detail scene on arrival');
