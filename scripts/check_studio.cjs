@@ -6,14 +6,14 @@ const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const source=fs.readFileSync('public/solar.js','utf8');
-const shaderPairs=[],draws=[],uploads=[];
+const shaderPairs=[],draws=[],uploads=[],viewUniforms=new Map();
 let currentSources=[],id=0;
 const gl=new Proxy({
 VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,
 getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type}),
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
-getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:()=>({}),
+getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:(p,name)=>({name}),uniform3fv:(u,v)=>viewUniforms.set(u.name,Array.from(v)),uniform1f:(u,v)=>viewUniforms.set(u.name,v),
 bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
 function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
@@ -116,6 +116,28 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
+  const cameraSurface=node('galaxy');
+  const key=(name,shiftKey=false)=>cameraSurface.listeners.keydown({key:name,shiftKey,preventDefault(){}});
+  const gesture=(type,id,x,y,button=0,shiftKey=false)=>cameraSurface.listeners[type]({type,button,shiftKey,pointerId:id,clientX:x,clientY:y,timeStamp:now,pointerType:coarse?'touch':'mouse'});
+  const pan=()=>node('galaxy').dataset.pan.split(',').map(Number);
+  const startYaw=viewUniforms.get('uYaw'),startPitch=viewUniforms.get('uPitch');
+  key('ArrowRight',true);tick(45);assert.ok(pan()[0]>.05,'Shift+arrows should translate the view');
+  if(useWebGL){assert.ok(Math.hypot(...viewUniforms.get('uCenter'))>.1,'Panning must reach the world-space camera');assert.equal(viewUniforms.get('uYaw'),startYaw);assert.equal(viewUniforms.get('uPitch'),startPitch);}
+  key('Home');tick(65);assert.ok(pan().every(v=>Math.abs(v)<.001),'Home should reset translation');
+  gesture('pointerdown',101,100,240,2);gesture('pointermove',101,180,270,2);gesture('pointerup',101,180,270,2);tick(45);
+  assert.ok(pan()[0]>.18&&pan()[1]>.02,'Right dragging should move the galaxy on both axes');
+  assert.equal(body.dataset.scene,'galaxy','Panning must not select or navigate');
+  if(useWebGL){assert.equal(viewUniforms.get('uYaw'),startYaw);assert.equal(viewUniforms.get('uPitch'),startPitch);}
+  key('Home');tick(65);
+  gesture('pointerdown',102,100,200);gesture('pointerdown',103,200,200);
+  gesture('pointermove',102,130,220);gesture('pointermove',103,230,220);
+  gesture('pointerup',103,230,220);gesture('pointerup',102,130,220);tick(55);
+  assert.ok(pan()[0]>.06&&pan()[1]>.015,'Two fingers should translate using their midpoint');
+  assert.equal(body.dataset.scene,'galaxy','Parallel two-finger movement should preserve the zoom');
+  key('Home');tick(65);
+  gesture('pointerdown',104,100,240,0,true);gesture('pointermove',104,4000,4000,0,true);gesture('pointerup',104,4000,4000,0,true);tick(45);
+  assert.ok(pan()[0]<=.3201&&pan()[1]<=.2601,'Panning should keep the galaxy within reach');
+  key('Home');tick(65);
   const websiteLabel=node('destination-websites'),websiteStar=node('star-websites');
   websiteLabel.listeners.pointerenter();assert.equal(websiteStar.dataset.active,'true');
   if(useWebGL){
@@ -123,13 +145,13 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     const index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites'),base=index*16;
     tick(45);const lit=uploads.filter(data=>data.length===112).at(-1);
     assert.ok(lit,'Destination lights must reach the galaxy GPU buffer');
-    assert.ok(lit[base+7]>1.8,'Hover should smoothly brighten the actual rendered star');
+    assert.ok(lit[base+7]>3.8,'Hover should smoothly brighten the actual rendered star');
     const expected=Object.values(context.PerculesDestinations).find(d=>d.marker==='destination-websites').point;assert.ok(lit.slice(base,base+3).every((v,i)=>Math.abs(v-expected[i])<.00001),'Light stays at its 3D destination');
   }
   assert.equal(node('star-contact').dataset.active,'false','Highlight the matching star only');
   assert.equal(body.dataset.scene,'galaxy','Hover must not begin navigation');
   websiteLabel.listeners.pointerleave();assert.equal(websiteStar.dataset.active,'false','Clear star after leaving the label');
-  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-.36)<.002,'Rendered light must settle after leaving, including with breathing paused');}
+  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-.62)<.002,'Rendered light must settle after leaving, including with breathing paused');}
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
