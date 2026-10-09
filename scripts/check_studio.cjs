@@ -110,7 +110,8 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
   let script=galaxy.replace("import('./solar.js?v=11')","Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
-    .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)");
+    .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)")
+    .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
   vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
   const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
@@ -155,6 +156,38 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
+  // Select the actual projected lights after moving and rotating the camera.
+  key('ArrowRight');key('ArrowUp');key('ArrowRight',true);tick(80);
+  let beacon=context.galaxyPoints().find(p=>p.id==='websites');
+  gesture('pointermove',200,beacon.x,beacon.y);
+  if(!coarse){assert.equal(websiteStar.dataset.active,'true');assert.equal(cameraSurface.style.cursor,'pointer');}
+  gesture('pointerdown',200,beacon.x,beacon.y);gesture('pointermove',200,beacon.x+35,beacon.y);gesture('pointerup',200,beacon.x+35,beacon.y);tick(80);
+  assert.equal(body.dataset.scene,'galaxy','Dragging a bright destination must not teleport');
+  beacon=context.galaxyPoints().find(p=>p.id==='websites');
+  gesture('pointerdown',201,beacon.x,beacon.y);gesture('pointercancel',201,beacon.x,beacon.y);gesture('pointerup',201,beacon.x,beacon.y);tick(4);
+  assert.equal(body.dataset.scene,'galaxy','Cancelled star tap must not teleport');
+  gesture('pointerdown',202,beacon.x,beacon.y,2);gesture('pointerup',202,beacon.x,beacon.y,2);tick(4);
+  assert.equal(body.dataset.scene,'galaxy','Right-click on a star must stay in the galaxy');
+  gesture('pointerdown',203,beacon.x,beacon.y,0,true);gesture('pointerup',203,beacon.x,beacon.y,0,true);tick(4);
+  assert.equal(body.dataset.scene,'galaxy','Shift tap must stay a pan gesture');
+  gesture('pointerdown',204,beacon.x,beacon.y);gesture('pointerdown',205,beacon.x+20,beacon.y);
+  gesture('pointerup',205,beacon.x+20,beacon.y);gesture('pointerup',204,beacon.x,beacon.y);tick(4);
+  assert.equal(body.dataset.scene,'galaxy','Two-finger star gesture must not teleport');
+  gesture('pointerdown',206,1,1);gesture('pointerup',206,1,1);tick(4);
+  assert.equal(body.dataset.scene,'galaxy','Empty space must not teleport');
+  for(const [destinationId,destination] of Object.entries(context.PerculesDestinations).filter(([,d])=>d.marker)){
+    key('Home');tick(80);key('ArrowLeft');key('ArrowDown');key('ArrowRight',true);tick(80);
+    const target=context.galaxyPoints().find(p=>p.id===destinationId);
+    assert.ok(target&&target.x>0&&target.x<390&&target.y>0&&target.y<844,'Projected destination should be on screen');
+    const dx=coarse?12:0;
+    gesture('pointerdown',207,target.x+dx,target.y);gesture('pointerup',207,target.x+dx,target.y);
+    for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
+    assert.equal(body.dataset.scene,'system','One direct star tap must reach the whole system');
+    assert.equal(body.dataset.world,destinationId,'Star tap must select its matching world');
+    assert.equal(localSolar.isFocused(),false,'Star teleport must not open planet details');
+    assert.ok(Number(node('galaxy').dataset.targetOffset)<.00001,'Direct star teleport must center its destination');
+    node('brand-home').listeners.click();tick(reduced?4:80);
+  }
   navigate('contact','venus');for(let i=0;i<12;i++)await Promise.resolve();tick(reduced?4:80);
   assert.equal(body.dataset.scene,'system');assert.equal(node('scene-title').textContent,'Kontakt');
   assert.equal(localSolar.isFocused(),false,'Arrival must show the entire system');
