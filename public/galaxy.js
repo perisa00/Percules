@@ -50,7 +50,9 @@
   let effectYaw = 0, effectPitch = 0, effectEnergy = 0, effectTime = 0;
   let breathPhase = 0, breath = 0, compression = 0, flowPull = 0, flowVelocity = 0;
   let frameId = 0, previousTime = 0, lost = false;
-  let pointers = new Map(), lastPinch = 0;
+  let pointers = new Map(), lastPinch = 0, lastCentroid=null;
+  let panX=0,panY=0,toPanX=0,toPanY=0;
+  function panBy(dx,dy){if(journey>=.12||alignment||flight)return;toPanX=clamp(toPanX+dx/width,-.32,.32);toPanY=clamp(toPanY+dy/height,-.26,.26);vx=vy=0;wake();}
   let mapPoints=[],hoveredWorld=null,focusedWorld=null,pointedWorld=null,litWorld=null;
   let draw, resizeRenderer;
   let flight=null,alignment=null,arrival=null,navigationTarget=null,pendingTeleport=false,teleportEnergy=0,worldDistance=20,worldFraming=0;
@@ -95,8 +97,8 @@
           beaconData[base+axis]=point[axis];
           beaconData[base+3+axis]=layer?tint[axis]:lerp([.82,.88,1][axis],tint[axis],level*.75);
         }
-        beaconData[base+6]=layer?9+18*level:1.65+6*level;
-        beaconData[base+7]=(layer?.10*level:.36+1.55*level)*fade;
+        beaconData[base+6]=layer?11+25*level:2.15+11*level;
+        beaconData[base+7]=(layer?.28*level:.62+3.4*level)*fade;
       }
     });
   }
@@ -131,8 +133,9 @@
     // Every destination uses this same sequence, regardless of its screen position.
     navigationTarget=target;arrival=null;shieldStart=null;shieldAge=-1;jumpProgress=-1;jumpGoal=[0,0];
     vx=vy=0;toYaw=yaw;toPitch=pitch;toZoom=zoom;
-    if(motion.matches){alignment=null;flight=null;toZoom=to;center=[...target()];wake();return;}
+    if(motion.matches){panX=panY=toPanX=toPanY=0;alignment=null;flight=null;toZoom=to;center=[...target()];wake();return;}
     alignment={from:[...center],start:performance.now(),duration:.24,to};
+    panX=panY=toPanX=toPanY=0;
     sound({type:'jump',delay:alignment.duration,duration:jumpDuration,shieldDuration});
     flight=null;wake();
   }
@@ -158,7 +161,7 @@
     el('back-studio').hidden=true;
     planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
     el('planet-labels').hidden=!system;
-    el('gesture-hint').textContent=system?(coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'PREVUCI DA OKRENEŠ · DVA PRSTA ZA ZUM':'PREVUCI DA OKRENEŠ · SKROLUJ DA ISTRAŽIŠ';
+    el('gesture-hint').textContent=system?(coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
     if(galaxy||scene==='travel')el('studio-emblem').hidden=true;
     canvas.setAttribute('aria-label',planet?'Interaktivni prikaz: '+focusedBody.name:system?destinations[world].name:'Interaktivna galaksija');
     planetNav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.planet===focusedBody?.id)));
@@ -686,11 +689,11 @@
       if(journey<.24)galaxyMarkers.forEach((button,index)=>{
         const point=projectBeacon(destinations[button.dataset.world].point);if(point.depth<.1)return;
         const level=beaconLevels[index],tint=beaconPalette[button.dataset.world],fade=1-smoothstep(.08,.24,journey);
-        const x=point.x*dpr,y=point.y*dpr,r=Math.max(.7,(1.65+6*level)*20/point.depth*dpr*.5);
+        const x=point.x*dpr,y=point.y*dpr,r=Math.max(.7,(2.15+11*level)*20/point.depth*dpr*.5);
         const color=tint.map((v,axis)=>Math.round(lerp([.82,.88,1][axis],v,level*.75)*255)).join(',');
         const light=ctx.createRadialGradient(x,y,0,x,y,r*2.2);
-        light.addColorStop(0,'rgba('+color+','+(.4+.5*level)*fade+')');
-        light.addColorStop(.24,'rgba('+color+','+(.14+.24*level)*fade+')');
+        light.addColorStop(0,'rgba('+color+','+(.5+.5*level)*fade+')');
+        light.addColorStop(.24,'rgba('+color+','+(.18+.34*level)*fade+')');
         light.addColorStop(1,'rgba('+color+',0)');
         ctx.fillStyle=light;ctx.beginPath();ctx.arc(x,y,r*2.2,0,TAU);ctx.fill();
       });
@@ -701,7 +704,7 @@
 
   function resize(){
     width=Math.max(1,innerWidth);height=Math.max(1,innerHeight);dpr=Math.min(devicePixelRatio||1,coarse?1.25:1.6)*quality;
-    el('gesture-hint').textContent=coarse?'PREVUCI ZA ROTACIJU · DVA PRSTA ZA ZUM':'PREVUCI DA OKRENEŠ · SKROLUJ DA ISTRAŽIŠ';
+    el('gesture-hint').textContent=coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
     const pixels=width*height*dpr*dpr;if(pixels>2000000)dpr*=Math.sqrt(2000000/pixels);
     canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);fit=Math.max(21.8,(width<800&&height>550?32:22.4)/(width/height));resizeRenderer();solar?.size(width,height,dpr);canvas.dataset.quality=quality<1?'balanced':'full';wake();
   }
@@ -715,6 +718,8 @@
       if(toPitch===cameraLimits.minPitch||toPitch===cameraLimits.maxPitch)vy=0;
     }
     const ease=motion.matches?1:1-Math.exp(-dt*8.5);
+    const panEase=motion.matches?1:1-Math.exp(-dt*12);panX=lerp(panX,toPanX,panEase);panY=lerp(panY,toPanY,panEase);
+    canvas.dataset.pan=panX.toFixed(4)+','+panY.toFixed(4);
     const oldYaw=yaw,oldPitch=pitch;
     yaw=lerp(yaw,toYaw,ease);pitch=lerp(pitch,toPitch,ease);
     let teleportTarget=0;
@@ -774,6 +779,12 @@
     else if(braking>=0&&!motion.matches)worldDistance*=1+.20*Math.exp(-braking*4)*Math.cos(braking*4.5)*(1-smoothstep(1,1.35,braking));
     else if(breathingEnabled&&journey>.98&&!focusedBody)worldDistance*=1+Math.sin(effectTime*.6)*.004;
     worldFraming=0;
+    if(!navigationTarget&&!alignment){
+      const amount=1-smoothstep(.08,.24,journey),sx=-panX*width*worldDistance/(height*1.2071)*amount,sy=panY*worldDistance/1.2071*amount;
+      const cy=Math.cos(yaw),sn=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
+      const right=[cr*cy+sr*sn*sp,-sr*cp,-cr*sn+sr*cy*sp],up=[sr*cy-cr*sn*sp,cr*cp,-sr*sn-cr*cy*sp];
+      center=center.map((value,i)=>value+right[i]*sx+up[i]*sy);
+    }
     if(solar){
       const view=solar.camera({dt,target:center.map((v,i)=>(v-solarAnchor[i])/solarScale),distance:worldDistance/solarScale,reducedMotion:motion.matches||!breathingEnabled,direct:!!flight||!!alignment||!!arrival});
       worldDistance=view.distance*solarScale;center=view.target.map((v,i)=>solarAnchor[i]+v*solarScale);worldFraming=view.framing;
@@ -795,14 +806,15 @@
     if(pendingSelection&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){
       const destination=pendingSelection;pendingSelection=null;changeWorld(destination.world,destination.id);
     }
-    const unsettled=Math.abs(toYaw-yaw)+Math.abs(toPitch-pitch)+Math.abs(toZoom-zoom)+Math.abs(vx)+Math.abs(vy)>.0001;
+    const unsettled=Math.abs(toYaw-yaw)+Math.abs(toPitch-pitch)+Math.abs(toZoom-zoom)+Math.abs(vx)+Math.abs(vy)+Math.abs(toPanX-panX)+Math.abs(toPanY-panY)>.0001;
     if(!frameId&&(beaconFading||shieldAge>=0||teleportEnergy>.001||flight||worldFlight||pendingSelection||alignment||arrival||breathingEnabled||pointers.size||unsettled||effectEnergy>.0001||compression>.0001||Math.abs(flowPull)+Math.abs(flowVelocity)>.0001||Math.abs(cameraRoll+.20)>.00001))frameId=requestAnimationFrame(frame);
   }
   function wake(){if(!frameId&&!document.hidden&&!lost)frameId=requestAnimationFrame(frame);}
   function interact(){wake();}
-  function reset(){pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
+  function reset(){toPanX=toPanY=0;pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
   canvas.addEventListener('pointerdown',e=>{
-    if(e.button!==0)return;pointedWorld=null;updateBeaconLight();pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;canvas.classList.add('dragging');interact();
+    const panning=journey<.12&&(e.button===2||e.shiftKey);if(e.button!==0&&!panning)return;pointedWorld=null;updateBeaconLight();pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false,mode:panning?'pan':'orbit'});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;lastCentroid=null;
+    if(pointers.size===2){const [a,b]=[...pointers.values()];lastPinch=Math.hypot(a.x-b.x,a.y-b.y);lastCentroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};}canvas.classList.add('dragging');interact();
   });
   canvas.addEventListener('pointermove',e=>{
     const old=pointers.get(e.pointerId);if(!old){if(!coarse&&journey<.12&&!flight&&!alignment)probeGalaxy(e.clientX,e.clientY);if(!coarse&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){solar.probe(e.clientX,e.clientY);wake();}return;}
@@ -811,21 +823,27 @@
     if(moved)solar?.clearHover();else if(pointers.size===1)return;
     if(pointers.size===1){
       const dx=e.clientX-old.x,dy=e.clientY-old.y,elapsed=clamp((e.timeStamp-old.time)/1000,.004,.08);
+      if(old.mode==='pan'){panBy(dx,dy);interact();return;}
       toYaw+=dx*.0042;toPitch=limitPitch(toPitch+dy*.0028);
       const weight=1-Math.exp(-elapsed*22);
       vx=motion.matches?0:lerp(vx,clamp(dx*.0042/elapsed,-1.15,1.15),weight);
       vy=motion.matches?0:lerp(vy,clamp(dy*.0028/elapsed,-.65,.65),weight);
     }
-    else {const [a,b]=[...pointers.values()],distance=Math.hypot(a.x-b.x,a.y-b.y);if(lastPinch>0)changeZoom(Math.log(lastPinch/Math.max(distance,1))*700);lastPinch=distance;vx=vy=0;}
+    else {const [a,b]=[...pointers.values()],distance=Math.hypot(a.x-b.x,a.y-b.y),centroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};if(lastCentroid)panBy(centroid.x-lastCentroid.x,centroid.y-lastCentroid.y);if(lastPinch>0&&distance>1)changeZoom(Math.log(lastPinch/distance)*700);lastPinch=distance;lastCentroid=centroid;vx=vy=0;}
     interact();
   });
-  function release(e){const pointer=pointers.get(e.pointerId);if(!pointer)return;const tap=e.type==='pointerup'&&!pointer.moved&&pointers.size===1&&Math.hypot(e.clientX-pointer.startX,e.clientY-pointer.startY)<=7;if(e.type!=='pointerup'||e.timeStamp-pointer.time>100)vx=vy=0;pointers.delete(e.pointerId);lastPinch=0;if(!pointers.size)canvas.classList.remove('dragging');if(tap&&journey>.98&&solar&&!focusedBody&&!flight&&!alignment&&!worldFlight){const body=solar.pick(e.clientX,e.clientY);if(body)solar.activate(body.id,e.pointerType==='touch'||coarse);}interact();}
+  function release(e){const pointer=pointers.get(e.pointerId);if(!pointer)return;const tap=e.type==='pointerup'&&e.button!==2&&pointer.mode!=='pan'&&!pointer.moved&&pointers.size===1&&Math.hypot(e.clientX-pointer.startX,e.clientY-pointer.startY)<=7;if(e.type!=='pointerup'||e.timeStamp-pointer.time>100)vx=vy=0;pointers.delete(e.pointerId);lastPinch=0;lastCentroid=null;if(!pointers.size)canvas.classList.remove('dragging');if(tap&&journey>.98&&solar&&!focusedBody&&!flight&&!alignment&&!worldFlight){const body=solar.pick(e.clientX,e.clientY);if(body)solar.activate(body.id,e.pointerType==='touch'||coarse);}interact();}
   canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
+  canvas.addEventListener('contextmenu',e=>{if(journey<.12)e.preventDefault();});
   canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1));},{passive:false});
   canvas.addEventListener('pointerleave',e=>{pointedWorld=null;updateBeaconLight();if(!pointers.size&&!coarse&&!e.relatedTarget?.closest?.('#object-preview'))solar?.clearHover();});
   canvas.addEventListener('dblclick',()=>{if(journey<.12)reset();});
   canvas.addEventListener('keydown',e=>{
     if(e.altKey||e.ctrlKey||e.metaKey)return;
+    if(e.shiftKey&&journey<.12){
+      const shifts={ArrowLeft:[-28,0],ArrowRight:[28,0],ArrowUp:[0,-28],ArrowDown:[0,28]};
+      if(shifts[e.key]){panBy(...shifts[e.key]);e.preventDefault();return;}
+    }
     switch(e.key){
       case 'ArrowLeft':toYaw-=.12;break;case 'ArrowRight':toYaw+=.12;break;
       case 'ArrowUp':toPitch=limitPitch(toPitch+.09);break;case 'ArrowDown':toPitch=limitPitch(toPitch-.09);break;
