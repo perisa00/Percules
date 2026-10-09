@@ -146,13 +146,18 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     const index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites'),base=index*16;
     tick(45);const lit=uploads.filter(data=>data.length===112).at(-1);
     assert.ok(lit,'Destination lights must reach the galaxy GPU buffer');
-    assert.ok(lit[base+7]>3.8,'Hover should smoothly brighten the actual rendered star');
+    assert.ok(lit[base+7]>5,'Hover should smoothly brighten the actual rendered star');
+    for(let star=0;star<7;star++){
+      assert.ok(lit[star*16+6]>=7,'Every destination must have a visible resting core');
+      assert.ok(lit[star*16+7]>=2.34,'Resting stars must emit light without hover');
+      assert.ok(lit[star*16+14]>=24&&lit[star*16+15]>=.2199,'Every destination must keep a soft colored halo at rest');
+    }
     const expected=Object.values(context.PerculesDestinations).find(d=>d.marker==='destination-websites').point;assert.ok(lit.slice(base,base+3).every((v,i)=>Math.abs(v-expected[i])<.00001),'Light stays at its 3D destination');
   }
   assert.equal(node('star-contact').dataset.active,'false','Highlight the matching star only');
   assert.equal(body.dataset.scene,'galaxy','Hover must not begin navigation');
   websiteLabel.listeners.pointerleave();assert.equal(websiteStar.dataset.active,'false','Clear star after leaving the label');
-  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-.62)<.002,'Rendered light must settle after leaving, including with breathing paused');}
+  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-2.35)<.002,'Rendered light must settle after leaving, including with breathing paused');}
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
@@ -160,7 +165,8 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   key('ArrowRight');key('ArrowUp');key('ArrowRight',true);tick(80);
   let beacon=context.galaxyPoints().find(p=>p.id==='websites');
   gesture('pointermove',200,beacon.x,beacon.y);
-  if(!coarse){assert.equal(websiteStar.dataset.active,'true');assert.equal(cameraSurface.style.cursor,'pointer');}
+  if(!coarse){assert.equal(websiteStar.dataset.active,'true');assert.equal(cameraSurface.style.cursor,'pointer');
+    node('destination-apps').listeners.focus();gesture('pointermove',200,beacon.x,beacon.y);assert.equal(websiteStar.dataset.active,'true','Direct star hover must override another label keyboard focus');node('destination-apps').listeners.blur();}
   gesture('pointerdown',200,beacon.x,beacon.y);gesture('pointermove',200,beacon.x+35,beacon.y);gesture('pointerup',200,beacon.x+35,beacon.y);tick(80);
   assert.equal(body.dataset.scene,'galaxy','Dragging a bright destination must not teleport');
   beacon=context.galaxyPoints().find(p=>p.id==='websites');
