@@ -165,8 +165,8 @@
     el('back-system').textContent=pink?'← Cela teretana':'← Ceo sistem';
     el('back-studio').hidden=true;
     planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
-    el('planet-labels').hidden=!system;
-    el('gesture-hint').textContent=system?(coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
+    el('planet-labels').hidden=!system||pink;
+    el('gesture-hint').textContent=system?(pink?'IZABERI ZONU ISPOD · PREVUCI ZA ROTACIJU':coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
     if(galaxy||scene==='travel')el('studio-emblem').hidden=true;
     canvas.setAttribute('aria-label',planet?'Interaktivni prikaz: '+focusedBody.name:system?destinations[world].name:'Interaktivna galaksija');
     planetNav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.planet===focusedBody?.id)));
@@ -174,9 +174,15 @@
   }
   function rebuildNav(){
     planetNav.replaceChildren();
-    for(const body of solar.getBodies()){const button=document.createElement('button');button.textContent=body.name;button.dataset.planet=body.id;button.setAttribute('aria-pressed','false');button.addEventListener('click',event=>{pendingSelection=null;solar.activate(body.id,coarse&&event.detail!==0);wake();});button.addEventListener('pointerenter',()=>{if(!coarse)solar.hover(body.id);});button.addEventListener('focus',()=>solar.hover(body.id));planetNav.append(button);}
+    for(const body of solar.getBodies()){
+      const button=document.createElement(body.href?'a':'button');button.textContent=body.name;button.dataset.planet=body.id;
+      if(body.href){button.href=body.href;button.target='_blank';button.rel='noopener noreferrer';button.setAttribute('aria-label',body.name+' — otvori sajt u novom tabu');}
+      else{button.setAttribute('aria-pressed','false');button.addEventListener('click',event=>{pendingSelection=null;solar.activate(body.id,coarse&&event.detail!==0);wake();});button.addEventListener('pointerenter',()=>{if(!coarse)solar.hover(body.id);});button.addEventListener('focus',()=>solar.hover(body.id));}
+      planetNav.append(button);
+    }
   }
   function changeWorld(world,id=null){
+    world=destinations[world]?.world||world;
     if(!solar||!destinations[world])return;
     if(world===solar.worldId()){solar.clearFocus();wake();return;}
     cancelTeleport();pendingSelection=null;
@@ -188,7 +194,7 @@
     wake();
   }
   function navigate(detail){
-    const world=detail.world||'studio',id=detail.id||null;
+    const requestedWorld=detail.world||'studio',world=destinations[requestedWorld]?.world||requestedWorld,id=detail.id||null;
     if(!destinations[world])return;
     if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){changeWorld(world,id);return;}
     cancelTeleport();pendingSelection={world,id};
@@ -198,12 +204,12 @@
   function ensureSolar(){
     if(solar||solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=milica-gym-1').then(async module=>{
+    solarLoading=import('./solar.js?v=milica-gym-2').then(async module=>{
       try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
       catch(e){console.warn('Arrival shield unavailable:',e);}
       try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}
       catch(e){console.warn('Jump effect unavailable:',e);}
-      solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onHover:detail=>document.dispatchEvent(new CustomEvent('percules:hover',{detail})),onDestination:world=>changeWorld(world),onSelect:body=>{
+      solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onExternal:url=>window.open(url,'_blank','noopener,noreferrer'),onHover:detail=>document.dispatchEvent(new CustomEvent('percules:hover',{detail})),onDestination:world=>changeWorld(world),onSelect:body=>{
         if(body){if(!arrival&&!worldFlight)cancelTeleport();sound({type:'select'});}focusedBody=body;vx=vy=0;
         if(body){const angle=body.id==='sun'?.25:Math.hypot(body.position[0],body.position[2])<.001?-.65:Math.atan2(-body.position[0],-body.position[2])+.6;toYaw=yaw+Math.atan2(Math.sin(angle-yaw),Math.cos(angle-yaw));toPitch=.32;}
         else {toPitch=.73;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));}
@@ -780,7 +786,7 @@
     solarAnchor=flowPoint(solarPoint);
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
-    const systemFit=solar?.worldId()==='milica'?Math.max(24,20/(width/height)):Math.max(44,46/(width/height));
+    const systemFit=solar?.worldId()==='milica'?Math.max(width<800&&height<700?38:24,20/(width/height)):Math.max(44,46/(width/height));
     worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);
@@ -883,7 +889,7 @@
     button.addEventListener('focus',()=>{ensureSolar();focusedWorld=button.dataset.world;updateBeaconLight();});
     button.addEventListener('blur',()=>{focusedWorld=null;updateBeaconLight();});
   }
-  for(const id of ['brand-home','back-galaxy','reset-view'])el(id).addEventListener('click',reset);
+  for(const id of ['brand-home','back-galaxy','milica-back-galaxy','reset-view'])el(id).addEventListener('click',reset);
   document.addEventListener('percules:navigate',e=>navigate(e.detail||{}));
   document.addEventListener('percules:unfocus',()=>{pendingSelection=null;solar?.clearFocus();wake();});
   document.addEventListener('percules:object',e=>{if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){solar.activate(e.detail.id,!!e.detail.preview);wake();}});

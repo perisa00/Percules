@@ -1,4 +1,4 @@
-import {createGymGeometry, drawGymFallback} from './space-gym.js?v=1';
+import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=2';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a+(b-a)*t;
@@ -430,74 +430,6 @@ export const worlds={
       "style": 4
     }
   ],
-  "projects": [
-    {
-      "id": "sun",
-      "name": "Sunce · Projekti",
-      "kind": "Središte ovog sveta",
-      "radius": 1.7,
-      "orbit": 0,
-      "angle": 0,
-      "color": [
-        0.48,
-        0.2,
-        0.74
-      ],
-      "style": 0,
-      "headline": "Svaki projekat. Poseban svet.",
-      "content": "jupiter",
-      "text": "Svaki projekat dobija svoj karakter. Upoznaj Miličin svet."
-    },
-    {
-      "id": "jupiter",
-      "name": "Projekti",
-      "kind": "Naši digitalni svetovi",
-      "radius": 1.25,
-      "orbit": 7.1,
-      "angle": 0.35,
-      "color": [
-        0.48,
-        0.2,
-        0.74
-      ],
-      "atmosphere": [
-        0.65,
-        0.3,
-        0.95
-      ],
-      "style": 5,
-      "text": "Svaki projekat dobija svoj karakter. Upoznaj Miličin svet.",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "headline": "Svaki projekat. Poseban svet.",
-      "content": "jupiter"
-    },
-    {
-      "id": "milica-portal",
-      "name": "Miličin svet",
-      "kind": "Projekat · web aplikacija",
-      "radius": 1.15,
-      "orbit": 13.4,
-      "angle": 3.5,
-      "color": [
-        1,
-        0.65,
-        0.81
-      ],
-      "atmosphere": [
-        1,
-        0.4,
-        0.67
-      ],
-      "style": 7,
-      "destination": "milica",
-      "headline": "Uđi u Miličin roze svemir.",
-      "text": "Roze teretana koja lebdi u svemiru — tegovi, kardio i istezanje među zvezdama."
-    }
-  ],
   "contact": [
     {
       "id": "sun",
@@ -590,7 +522,7 @@ export const worlds={
   ],
   "milica": [
   {id:'sun',name:'Zona snage',kind:'Roze teretana · tegovi',radius:2,position:[-3.6,1,-1.4],color:[1,.35,.65],content:'milica',headline:'Snaga u roze.',text:'Tegovi, klupa i stalak za vežbanje na platformi među zvezdama.'},
-  {id:'earth',name:'Miličina aplikacija',kind:'Projekat · lični trener',radius:1.3,position:[0,2.65,-4.1],color:[1,.65,.8],content:'milica',headline:'Miličin svet. Tvoj ritam.',text:'Upoznaj projekat i otvori Miličinu aplikaciju za lični trening.'},
+  {id:'earth',name:'Miličina aplikacija',kind:'Projekat · lični trener',radius:1.8,position:[.35,3.05,-4.1],color:[1,.65,.8],content:'milica',href:'https://www.milicapersonaltrainer.com/',headline:'Miličin svet. Tvoj ritam.',text:'Otvori www.milicapersonaltrainer.com u novom tabu.'},
   {id:'cardio',name:'Kardio zona',kind:'Roze teretana · pokret',radius:1.8,position:[3.15,.9,-.8],color:[1,.45,.7],content:'milica',headline:'Pokret među zvezdama.',text:'Roze trake za trčanje, neonsko svetlo i pogled na svemir.'},
   {id:'stretch',name:'Zona istezanja',kind:'Roze teretana · ravnoteža',radius:1.7,position:[.2,.1,2.6],color:[1,.65,.8],content:'milica',headline:'Prostor za tvoj ritam.',text:'Roze strunjače i oprema za istezanje na otvorenoj svemirskoj platformi.'}
   ]
@@ -608,6 +540,7 @@ export function createSolar(canvas, options={}) {
   const labelButtons=new Map();
   function labels(){
   labelRoot.replaceChildren();labelButtons.clear();
+  if(world==='milica')return;
   for(const body of bodies){
     const button=document.createElement('button');button.className='planet-label';button.textContent=body.name;
     button.setAttribute('aria-label',`Istraži: ${body.name}`);button.addEventListener('click',event=>activate(body.id,event.detail!==0&&options.coarse));
@@ -640,6 +573,7 @@ export function createSolar(canvas, options={}) {
   }
   function select(id){
     const body=bodies.find(b=>b.id===id);if(!body)return;
+    if(body.href){clearHover();options.onExternal?.(body.href);return;}
     if(body.destination){clearHover();options.onDestination?.(body.destination);return;}
     clearHover();focus=body;focusZoom=1;canvas.dataset.focus=id;canvas.dataset.surface='procedural-detail';
     options.onSelect?.(body);
@@ -669,6 +603,7 @@ export function createSolar(canvas, options={}) {
   function probe(x,y){forcedHover=null;hoverPoint=[x,y];publishHover();}
   function clearHover(){hoverPoint=forcedHover=hovered=null;previewedTouchId=null;options.onHover?.(null);}
   function publishHover(){
+    if(world==='milica'){options.onHover?.(null);return;}
     const body=!focus&&lastProgress>.94?(forcedHover||(hoverPoint?pick(...hoverPoint):null)):null;
     hovered=body;
     if(!body){options.onHover?.(null);return;}
@@ -676,6 +611,7 @@ export function createSolar(canvas, options={}) {
     options.onHover?.({body,world,x:v.x,y:v.y,radius:body.radius*v.scale});
   }
   function activate(id,touch=false){
+    if(world==='milica'){select(id);return;}
     if(touch&&previewedTouchId!==id){previewedTouchId=id;hover(id);return;}
     select(id);
   }
@@ -727,12 +663,12 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       `precision mediump float;uniform float uAlpha;void main(){gl_FragColor=vec4(.40,.50,.66,uAlpha);}`);
     const corona=program(`attribute vec2 aPosition;uniform vec2 uCenter;uniform vec2 uSize;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(uCenter+aPosition*uSize,0.,1.);}`,
       `precision highp float;varying vec2 vUv;uniform float uTime,uOpacity;uniform vec3 uTint;void main(){float r=length(vUv),a=r>.0001?atan(vUv.y,vUv.x):0.;float ray=.72+.18*sin(a*17.+sin(a*7.+uTime*.12)*1.8)+.1*sin(a*31.-uTime*.15);float outer=exp(-r*5.5)*ray;float rim=exp(-abs(r-.285)*24.)*.21;float alpha=(outer*.45+rim)*(1.-smoothstep(.75,1.,r));gl_FragColor=vec4(uTint*alpha*uOpacity,alpha*uOpacity);}`);
-    const gym=program(`precision highp float;attribute vec3 aPosition,aNormal,aColor;attribute float aGlow;varying vec3 vColor,vNormal,vWorld;varying float vGlow;${view}void main(){vColor=aColor;vNormal=aNormal;vWorld=aPosition;vGlow=aGlow;gl_Position=project(aPosition);}`,
+    const gym=program(`precision highp float;attribute vec3 aPosition,aNormal,aColor;attribute float aGlow;uniform vec3 uOffset,uPivot;uniform float uAngle;varying vec3 vColor,vNormal,vWorld;varying float vGlow;${view}void main(){float c=cos(uAngle),s=sin(uAngle);vec3 p=aPosition-uPivot;vWorld=vec3(p.x,p.y*c-p.z*s,p.y*s+p.z*c)+uPivot+uOffset;vNormal=vec3(aNormal.x,aNormal.y*c-aNormal.z*s,aNormal.y*s+aNormal.z*c);vColor=aColor;vGlow=aGlow;gl_Position=project(vWorld);}`,
       `precision highp float;varying vec3 vColor,vNormal,vWorld;varying float vGlow;uniform vec3 uEye;uniform float uOpacity;void main(){vec3 n=normalize(vNormal),l=normalize(vec3(-3.,8.,5.)-vWorld),e=normalize(uEye-vWorld);float diffuse=max(dot(n,l),0.);float spec=pow(max(dot(n,normalize(l+e)),0.),36.);vec3 color=vColor*(.48+diffuse*.5)+vec3(1.,.49,.72)*spec*.25;color=mix(color,vColor*1.12,vGlow);gl_FragColor=vec4(color,uOpacity);}`);
     const backdrop=program(`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(aPosition,.999,1.);}`,
       `precision highp float;varying vec2 vUv;uniform vec2 uResolution;uniform float uYaw,uPitch;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 p=(vUv+1.)*.5*uResolution+vec2(uYaw*16.,uPitch*12.);vec2 cell=floor(p/28.),uv=fract(p/28.);float h=hash(cell),s=0.;if(h>.71){vec2 pos=vec2(hash(cell+3.7),hash(cell+8.1));float d=length((uv-pos)*28.);s=exp(-d*d*1.9)*(.2+h*.35);}float haze=exp(-pow((vUv.y+vUv.x*.32)*3.2,2.))*.009;gl_FragColor=vec4(vec3(.001,.002,.006)+vec3(.53,.66,.91)*s+vec3(.15,.23,.48)*haze,1.);}`);
     const pinkSky=program(`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(aPosition,.999,1.);}`,
-      `precision highp float;varying vec2 vUv;uniform vec2 uResolution;uniform float uYaw,uPitch,uOpacity;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 q=vUv;float cloud=exp(-pow((q.y-q.x*.35+.12)*2.,2.))*(.5+.5*sin(q.x*3.+q.y*2.));vec3 color=mix(vec3(.045,.004,.024),vec3(.22,.025,.10),cloud);vec2 p=(q+1.)*.5*uResolution+vec2(uYaw*80.,uPitch*55.);vec2 cell=floor(p/38.),uv=fract(p/38.);float h=hash(cell);vec2 pos=vec2(hash(cell+3.7),hash(cell+8.1));float d=length((uv-pos)*38.);float star=exp(-d*d*1.3)*step(.48,h)*(.3+h);color+=vec3(1.,.57,.76)*star;vec2 moon=(q-vec2(.64,.48))*vec2(uResolution.x/uResolution.y,1.);float r=length(moon);color=mix(color,vec3(.65,.16,.36)*(.45+.55*max(0.,1.-r/.13)),1.-smoothstep(.127,.13,r));color+=vec3(.7,.09,.30)*exp(-abs(r-.13)*60.)*.2;gl_FragColor=vec4(color,uOpacity);}`);
+      `precision highp float;varying vec2 vUv;uniform vec2 uResolution;uniform float uYaw,uPitch,uOpacity;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 q=vUv;float cloud=exp(-pow((q.y-q.x*.35+.12)*2.,2.))*(.5+.5*sin(q.x*3.+q.y*2.));vec3 color=mix(vec3(.045,.004,.024),vec3(.22,.025,.10),cloud);vec2 p=(q+1.)*.5*uResolution+vec2(uYaw*80.,uPitch*55.);vec2 cell=floor(p/38.),uv=fract(p/38.);float h=hash(cell);vec2 pos=vec2(hash(cell+3.7),hash(cell+8.1));float d=length((uv-pos)*38.);float star=exp(-d*d*1.3)*step(.48,h)*(.3+h);color+=vec3(1.,.57,.76)*star;gl_FragColor=vec4(color,uOpacity);}`);
     const sphere=[],indices=[],lat=64,lon=96;
     for(let y=0;y<=lat;y++)for(let x=0;x<=lon;x++){const a=x/lon*TAU,b=y/lat*Math.PI;sphere.push(Math.sin(b)*Math.cos(a),Math.cos(b),Math.sin(b)*Math.sin(a),x/lon,1-y/lat);}
     for(let y=0;y<lat;y++)for(let x=0;x<lon;x++){const a=y*(lon+1)+x,b=a+lon+1;indices.push(a,a+1,b,a+1,b+1,b);}
@@ -741,7 +677,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const ringMesh=[];for(let i=0;i<160;i++){const a=i/160*TAU,b=(i+1)/160*TAU;for(const [t,r] of [[a,1.24],[b,1.24],[a,2.48],[a,2.48],[b,1.24],[b,2.48]])ringMesh.push(Math.cos(t)*r,0,Math.sin(t)*r);}
     const ringBuffer=buffer(new Float32Array(ringMesh)),quad=buffer(new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]));
     const orbitBuffers=new Map(Object.entries(worlds).map(([id,list])=>[id,id==='milica'?[]:list.slice(1).map(b=>{const pts=[];for(let i=0;i<=192;i++){const a=i/192*TAU;pts.push(Math.cos(a)*b.orbit,0,Math.sin(a)*b.orbit);}return buffer(new Float32Array(pts));})]));
-    const gymBuffers=gymGeometry.map(mesh=>({id:mesh.id,buffer:buffer(mesh.data),count:mesh.data.length/10}));
+    const gymBuffers=gymGeometry.map(mesh=>({...mesh,buffer:buffer(mesh.data),count:mesh.data.length/10}));
     const textures=new Map();
     for(const id of [...new Set(Object.values(worlds).flat().map(b=>b.id)),'earth-night','earth-clouds']){
       const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
@@ -750,6 +686,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const programs={surface,atmosphere,ring,orbit,corona,backdrop,gym,pinkSky},locations=new Map();
     for(const p of Object.values(programs)){
       const u={};for(const name of ['uLight','uStyle','uRoll','uOpacity','uTarget','uYaw','uPitch','uDistance','uAspect','uFraming','uCenter','uRadius','uSpin','uTilt','uEye','uTint','uSun','uEarth','uSaturn','uTime','uMap','uNight','uClouds','uHasMap','uHasNight','uHasClouds','uSize','uAlpha','uResolution'])u[name]=gl.getUniformLocation(p,name);
+      for(const name of ['uOffset','uPivot','uAngle'])u[name]=gl.getUniformLocation(p,name);
       u.position=gl.getAttribLocation(p,'aPosition');u.uv=gl.getAttribLocation(p,'aUv');u.normal=gl.getAttribLocation(p,'aNormal');u.color=gl.getAttribLocation(p,'aColor');u.glow=gl.getAttribLocation(p,'aGlow');locations.set(p,u);
     }
     resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers,gymBuffers};
@@ -772,7 +709,8 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const returning=!focus&&focusMix>.00001;
     if(!viewInitialized||(!focus&&(!returning||state.direct))){distance=targetDistance;center=[...targetCenter];viewInitialized=true;}
     else {distance=Math.exp(mix(Math.log(distance),Math.log(targetDistance),blend));center=center.map((v,i)=>mix(v,targetCenter[i],blend));}
-    focusMix=mix(focusMix,focus?1:0,blend);framing=mix(framing,focus&&width<800?.40:0,blend);
+    const overviewFraming=world==='milica'&&width<800&&height<700?-.14:0;
+    focusMix=mix(focusMix,focus?1:0,blend);framing=mix(framing,focus&&width<800?.40:overviewFraming,blend);
     return {distance,target:[...center],framing};
   }
   function render(state){
@@ -794,7 +732,8 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       u=use(p.gym);
       for(const mesh of resources.gymBuffers){
         // Keep the architecture visible while a selected station is explored.
-        gl.uniform1f(u.uOpacity,focus&&mesh.id!==focus.id?1-focusMix*.65:1);
+        gl.uniform1f(u.uOpacity,focus&&mesh.zone!==focus.id?1-focusMix*.65:1);
+        const pose=gymPose(mesh,time);gl.uniform3fv(u.uOffset,pose.offset);gl.uniform3fv(u.uPivot,pose.pivot);gl.uniform1f(u.uAngle,pose.angle);
         gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);attributes(u.position,-1,u.normal,u.color,u.glow);
         gl.vertexAttribPointer(u.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(u.normal,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(u.color,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(u.glow,1,gl.FLOAT,false,40,36);
         gl.drawArrays(gl.TRIANGLES,0,mesh.count);
@@ -830,6 +769,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     gl.depthMask(true);gl.activeTexture(gl.TEXTURE0);gl.disable(gl.CULL_FACE);updateLabels(yaw,pitch,progress);publishHover();
   }
   function updateLabels(yaw,pitch,progress){
+    if(world==='milica')return;
     const occupied=[];
     for(const b of bodies){const button=labelButtons.get(b.id),v=project(b.position,yaw,pitch),radius=b.radius*v.scale;
       const x=v.x,y=v.y+Math.max(radius,3)+15;
@@ -843,7 +783,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
       const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';
       for(let i=0;i<110;i++){const x=((i*137.51+yaw*12)%width+width)%width,y=((i*i*37.71+pitch*12)%height+height)%height;ctx.fillRect(x,y,i%7===0?2:1,i%7===0?2:1);}
-      ctx.globalAlpha=1;drawGymFallback(ctx,gymGeometry,p=>project(p,yaw,pitch),focus?.id);updateLabels(yaw,pitch,lastProgress);return;
+      ctx.globalAlpha=1;drawGymFallback(ctx,gymGeometry,p=>project(p,yaw,pitch),focus?.id,time);updateLabels(yaw,pitch,lastProgress);return;
     }
     for(const b of bodies){const v=project(b.position,yaw,pitch),r=Math.max(2,b.radius*v.scale);if(v.depth<=0)continue;
       const g=ctx.createRadialGradient(v.x-r*.28,v.y-r*.2,r*.1,v.x,v.y,r);g.addColorStop(0,`rgb(${b.color.map(c=>Math.round(c*255)).join(',')})`);g.addColorStop(1,'#070b14');ctx.fillStyle=g;ctx.beginPath();ctx.arc(v.x,v.y,r,0,TAU);ctx.fill();

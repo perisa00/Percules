@@ -1,6 +1,7 @@
-// A small, static mesh: the same pink space gym is used by WebGL and Canvas.
+// Static buffers plus joint transforms, shared by WebGL and Canvas.
 export function createGymGeometry() {
   const meshes = new Map();
+  const motions = new Map();
   const rose = [0.86, 0.19, 0.46], blush = [1, 0.54, 0.74];
   const pale = [1, 0.76, 0.88], dark = [0.27, 0.035, 0.13], neon = [1, 0.25, 0.61];
   let group = 'room';
@@ -32,10 +33,13 @@ export function createGymGeometry() {
       face([end,point(end,r),point(end,s),end],n,color,glow);
     }
   }
-  function arc(cx, y, cz, rx, rz, radius, color, glow=0, start=0, end=Math.PI*2, segments=64) {
-    for(let i=0;i<segments;i++) {
-      const a=start+(end-start)*i/segments,b=start+(end-start)*(i+1)/segments;
-      tube([cx+Math.cos(a)*rx,y,cz+Math.sin(a)*rz],[cx+Math.cos(b)*rx,y,cz+Math.sin(b)*rz],radius,color,glow,6);
+  function ellipsoid(x,y,z,rx,ry,rz,color) {
+    const point=(a,b)=>[x+rx*Math.sin(b)*Math.cos(a),y+ry*Math.cos(b),z+rz*Math.sin(b)*Math.sin(a)];
+    for(let j=0;j<10;j++)for(let i=0;i<16;i++){
+      const a=i/16*Math.PI*2,c=(i+1)/16*Math.PI*2,b=j/10*Math.PI,d=(j+1)/10*Math.PI;
+      const middle=point((a+c)/2,(b+d)/2),normal=[(middle[0]-x)/(rx*rx),(middle[1]-y)/(ry*ry),(middle[2]-z)/(rz*rz)];
+      const length=Math.hypot(...normal);
+      face([point(a,b),point(c,b),point(c,d),point(a,d)],normal.map(v=>v/length),color);
     }
   }
   function dumbbell(x,y,z,length=1.1,r=.24) {
@@ -62,7 +66,6 @@ export function createGymGeometry() {
   }
   tube([-6,4,-4.5],[6,4,-4.5],.11,rose);
   tube([-6,3.94,-4.46],[6,3.94,-4.46],.035,pale,1);
-  arc(0,5.1,0,6.4,5,.05,neon,1);
   for(const x of [-6,6])tube([x,.9,-4.5],[x,.9,3.6],.055,pale);
   tube([-6,.9,-4.5],[6,.9,-4.5],.055,pale);
 
@@ -92,7 +95,11 @@ export function createGymGeometry() {
   for(const x of [2.05,4.25]) {
     box(x,.18,-.8,1.55,.32,3.2,rose);
     box(x,.36,-.55,1.15,.055,2.55,dark);
-    for(let z=-1.6;z<.8;z+=.22)box(x,.393,z,1.12,.012,.018,blush);
+    for(let i=0;i<12;i++){
+      group=`belt-${x}-${i}`;motions.set(group,{zone:'cardio',motion:'belt',phase:i*.2});
+      box(x,.393,0,1.12,.012,.018,blush);
+    }
+    group='cardio';
     for(const side of [-.68,.68]) {
       box(x+side,.4,-.8,.13,.13,3,pale);
       tube([x+side,.4,-2],[x+side,1.95,-2.25],.065,pale);
@@ -120,28 +127,77 @@ export function createGymGeometry() {
     tube([3.25+Math.cos(a)*.22,.83+Math.sin(a)*.23,1.5],[3.25+Math.cos(b)*.22,.83+Math.sin(b)*.23,1.5],.055,pale,0,6);
   }
 
+  // Stylized Milica: a ponytail, pink training clothes and two curling dumbbells.
+  // Arms and weights share their elbow pivot, so the weights stay in her hands.
+  group='trainer';motions.set(group,{zone:'sun',motion:'trainer'});
+  const cx=-.65,cz=.05,skin=[1,.68,.82],hair=[.38,.055,.19];
+  for(const side of [-1,1]){
+    const x=cx+side*.18;
+    tube([x,1.23,cz],[x+side*.03,.72,cz+.04],.14,rose);
+    ellipsoid(x+side*.03,.72,cz+.04,.135,.14,.135,rose);
+    tube([x+side*.03,.72,cz+.04],[x+side*.05,.22,cz],.10,rose);
+    ellipsoid(x+side*.05,.13,cz+.10,.14,.12,.25,pale);
+    box(x+side*.05,.05,cz+.10,.27,.05,.43,neon);
+  }
+  ellipsoid(cx,1.30,cz,.32,.25,.21,rose);
+  ellipsoid(cx,1.76,cz,.29,.40,.19,skin);
+  ellipsoid(cx,2.01,cz,.34,.27,.21,rose);
+  box(cx,1.83,cz+.03,.55,.10,.36,dark);
+  tube([cx,2.15,cz],[cx,2.42,cz],.10,skin);
+  ellipsoid(cx,2.64,cz,.225,.28,.215,skin);
+  ellipsoid(cx,2.72,cz-.12,.235,.27,.15,hair);
+  ellipsoid(cx,2.86,cz-.01,.23,.10,.19,hair);
+  for(const side of [-1,1])ellipsoid(cx+side*.075,2.65,cz+.202,.022,.026,.015,hair);
+  box(cx,2.52,cz+.211,.072,.018,.015,rose);
+  tube([cx,2.76,cz-.25],[cx+.08,2.57,cz-.48],.10,hair);
+  tube([cx+.08,2.57,cz-.48],[cx+.14,2.17,cz-.42],.085,hair);
+  for(const side of [-1,1]){
+    const x=cx+side*.43;
+    ellipsoid(cx+side*.33,2.13,cz,.14,.15,.14,skin);
+    tube([cx+side*.33,2.13,cz],[x,1.68,cz+.03],.105,skin);
+    ellipsoid(x,1.68,cz+.03,.11,.11,.11,skin);
+    group=side<0?'curl-left':'curl-right';
+    motions.set(group,{zone:'sun',motion:'curl',pivot:[x,1.68,cz+.03],phase:side<0?0:.35});
+    tube([x,1.68,cz+.03],[x,1.12,cz+.03],.085,skin);
+    ellipsoid(x,1.10,cz+.03,.095,.10,.09,skin);
+    dumbbell(x,1.09,cz+.04,.65,.16);
+    group='trainer';
+  }
+
   group='earth';
   // Illuminated sign with mesh lettering, readable without an image download.
-  box(0,2.65,-4.18,3.7,1.32,.16,dark);
-  for(const y of [2.02,3.28])box(0,y,-4.06,3.72,.04,.06,neon,1);
-  for(const x of [-1.83,1.83])box(x,2.65,-4.06,.04,1.3,.06,neon,1);
-  const letters={M:['10001','11011','10101','10001','10001','10001','10001'],I:['111','010','010','010','010','010','111'],L:['100','100','100','100','100','100','111'],C:['1111','1000','1000','1000','1000','1000','1111'],A:['01110','10001','10001','11111','10001','10001','10001']};
-  let cursor=-1.43;
-  for(const char of 'MILICA') {
-    const rows=letters[char];
-    rows.forEach((row,y)=>[...row].forEach((pixel,x)=>{if(pixel==='1')box(cursor+x*.095,2.94-y*.095,-4.05,.077,.077,.06,pale,1);}));
-    cursor+=(rows[0].length+1)*.095;
+  box(.35,3.05,-4.18,5.9,1.32,.16,dark);
+  for(const y of [2.42,3.68])box(.35,y,-4.06,5.92,.04,.06,neon,1);
+  for(const x of [-2.58,3.28])box(x,3.05,-4.06,.04,1.3,.06,neon,1);
+  const letters={M:['10001','11011','10101','10001','10001','10001','10001'],I:['111','010','010','010','010','010','111'],L:['100','100','100','100','100','100','111'],C:['1111','1000','1000','1000','1000','1000','1111'],A:['01110','10001','10001','11111','10001','10001','10001'],W:['10001','10001','10001','10101','10101','10101','01010'],P:['1110','1001','1001','1110','1000','1000','1000'],E:['1111','1000','1000','1110','1000','1000','1111'],R:['1110','1001','1001','1110','1010','1001','1001'],S:['0111','1000','1000','0110','0001','0001','1110'],O:['0110','1001','1001','1001','1001','1001','0110'],N:['1001','1101','1101','1011','1011','1001','1001'],T:['11111','00100','00100','00100','00100','00100','00100'],'.':['0','0','0','0','0','0','1']};
+  for(const [text,size,top] of [['MILICA',.09,3.48],['WWW.MILICAPERSONALTRAINER.COM',.037,2.82]]){
+    let cursor=.35-([...text].reduce((sum,char)=>sum+letters[char][0].length+1,0)-1)*size/2;
+    for(const char of text){
+      const rows=letters[char];
+      rows.forEach((row,y)=>[...row].forEach((pixel,x)=>{if(pixel==='1'){const a=cursor+x*size,b=top-y*size,h=size*.41;face([[a-h,b-h,-4.04],[a+h,b-h,-4.04],[a+h,b+h,-4.04],[a-h,b+h,-4.04]],[0,0,1],pale,1);}}));
+      cursor+=(rows[0].length+1)*size;
+    }
   }
-  return [...meshes].map(([id,data])=>({id,data:new Float32Array(data)}));
+  return [...meshes].map(([id,data])=>({id,zone:id,...motions.get(id),data:new Float32Array(data)}));
 }
 
-export function drawGymFallback(ctx, meshes, project, focusId) {
+export function gymPose(mesh,time) {
+  const bob=.012*Math.sin(time*1.8);
+  if(mesh.motion==='belt')return {offset:[0,0,-1.72+(time*.9+mesh.phase)%2.4],pivot:[0,0,0],angle:0};
+  if(mesh.motion==='curl')return {offset:[0,bob,0],pivot:mesh.pivot,angle:-.35-(1-Math.cos(time*1.8+mesh.phase))*.975};
+  return {offset:[0,mesh.motion==='trainer'?bob:0,0],pivot:[0,0,0],angle:0};
+}
+
+export function drawGymFallback(ctx, meshes, project, focusId,time=0) {
   const triangles=[];
-  for(const mesh of meshes)for(let i=0;i<mesh.data.length;i+=30) {
-    const d=mesh.data,points=[0,10,20].map(j=>project([d[i+j],d[i+j+1],d[i+j+2]]));
+  for(const mesh of meshes){
+    const pose=gymPose(mesh,time),c=Math.cos(pose.angle),s=Math.sin(pose.angle),p=pose.pivot,o=pose.offset;
+    for(let i=0;i<mesh.data.length;i+=30) {
+    const d=mesh.data,points=[0,10,20].map(j=>{const y=d[i+j+1]-p[1],z=d[i+j+2]-p[2];return project([d[i+j]+o[0],y*c-z*s+p[1]+o[1],y*s+z*c+p[2]+o[2]]);});
     if(points.some(p=>p.depth<=0))continue;
-    const light=.55+Math.max(0,d[i+4])*.35+d[i+9]*.4;
-    triangles.push({points,depth:points.reduce((s,p)=>s+p.depth,0)/3,color:[d[i+6],d[i+7],d[i+8]].map(v=>Math.min(255,Math.round(v*light*255))),alpha:focusId&&mesh.id!==focusId?.4:1});
+    const light=.55+Math.max(0,d[i+4]*c-d[i+5]*s)*.35+d[i+9]*.4;
+    triangles.push({points,depth:points.reduce((s,p)=>s+p.depth,0)/3,color:[d[i+6],d[i+7],d[i+8]].map(v=>Math.min(255,Math.round(v*light*255))),alpha:focusId&&mesh.zone!==focusId?.4:1});
+    }
   }
   triangles.sort((a,b)=>b.depth-a.depth);
   for(const t of triangles){ctx.globalAlpha=t.alpha;ctx.fillStyle=`rgb(${t.color.join(',')})`;ctx.beginPath();ctx.moveTo(t.points[0].x,t.points[0].y);ctx.lineTo(t.points[1].x,t.points[1].y);ctx.lineTo(t.points[2].x,t.points[2].y);ctx.closePath();ctx.fill();}

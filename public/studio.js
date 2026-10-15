@@ -33,7 +33,7 @@ function show(id,world,focus=true,body=null){
 }
 function travel(element){
   origin=element;hidePreview();menuOpen(false);close();
-  const id=element.dataset.destination||null,world=element.dataset.world||Object.keys(destinations).find(key=>destinations[key].body===id)||'studio';
+  const id=element.dataset.destination||null,requestedWorld=element.dataset.world||Object.keys(destinations).find(key=>destinations[key].body===id)||'studio',world=destinations[requestedWorld]?.world||requestedWorld;
   requested={world,id};
   dispatch('percules:navigate',requested);
 }

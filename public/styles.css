@@ -206,6 +206,9 @@ body[data-flight="active"] #galaxy-destinations button,body[data-flight="alignin
 @media(max-height:550px){#galaxy-destinations{top:90px;column-gap:16px}}
 
 /* Milica's gym has a complete rose palette, including overlays and navigation. */
+#planet-nav a{flex-shrink:0;display:flex;align-items:center;min-height:44px;padding:10px 15px;border-radius:24px;color:#f5b7d3;text-decoration:none;font-size:12px;transition:background .25s,color .25s}
+#planet-nav a:hover{color:#ffe2ee;background:#a0346555}
+body[data-theme="pink"] #planet-labels,body[data-theme="pink"] .object-preview{display:none}
 body[data-theme="pink"]{--accent:#ffb9da;--line:#f58cb552;--muted:#e6adc7;background:#210615;color:#ffe0ed}
 body[data-theme="pink"] .world-haze{opacity:.45;background:radial-gradient(ellipse at 65% 25%,#e62d7e30,transparent 58%)}
 body[data-theme="pink"] .vignette{background:linear-gradient(180deg,#25081577,transparent 24%,transparent 68%,#25081599)}
@@ -226,4 +229,4 @@ body[data-theme="pink"] .scene-caption h1{color:#ffd0e5;text-shadow:0 0 28px #ff
 body[data-theme="pink"] .journey-button{border-color:#f5a2ca77}
 body[data-theme="pink"] .journey-button:hover,body[data-theme="pink"] .panel-cta:hover{color:#ffe1ee}
 body[data-theme="pink"] .detail-scroll{scrollbar-color:#d9659c66 transparent}
-@media(max-width:800px){body[data-theme="pink"][data-scene="system"] .scene-caption{max-width:calc(100% - 95px)}body[data-theme="pink"] #planet-nav button{padding:9px 12px;font-size:11px}}
+@media(max-width:800px){body[data-theme="pink"][data-scene="system"] .scene-caption{max-width:calc(100% - 95px)}body[data-theme="pink"] #planet-nav :is(button,a){padding:9px 12px;font-size:11px}}
