@@ -42,4 +42,12 @@ for(let local=0;local<WORKOUT_SLOT;local+=1/30){
   }
   if(local>=1.5&&local<=14.5)for(let side=0;side<2;side++)close(f.joints.feet[side],f.pose.feet[side],.001,'Bench feet must reach their planted position');
 }
-console.log('Workout checks passed: complete routine, fixed limb lengths, floor/belt contact, held props, continuous transitions and bench clearance.');
+for(let local=0;local<16;local+=1/30){
+  const f=workoutFrame(8*WORKOUT_SLOT+local),right=[Math.cos(f.pose.yaw),0,-Math.sin(f.pose.yaw)];
+  for(const part of ['hands','elbows','knees','feet'])for(let side=0;side<2;side++){
+    const lateral=f.joints[part][side].reduce((sum,v,axis)=>sum+(v-f.pose.root[axis])*right[axis],0);
+    assert.ok((side?lateral:-lateral)>.09,'Roller limbs must remain on their own side through sitting and standing: '+part+' / '+local);
+  }
+  if(local>=1.5&&local<=14.5)for(let side=0;side<2;side++)close(f.joints.hands[side],f.pose.hands[side],.001,'Roller palms must reach their support on the floor');
+}
+console.log('Workout checks passed: routine, contact, transitions, bench clearance and uncrossed roller limbs.');

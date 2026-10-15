@@ -1,4 +1,4 @@
-import {workoutFrame,workoutTransform,transformGymPoint} from './gym-workout.js?v=2';
+import {workoutFrame,workoutTransform,transformGymPoint} from './gym-workout.js?v=3';
 // Static buffers plus joint transforms, shared by WebGL and Canvas.
 export function createGymGeometry() {
   const meshes = new Map();

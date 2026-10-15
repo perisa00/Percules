@@ -1,5 +1,5 @@
-import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=4';
-import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=2';
+import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=5';
+import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=3';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a+(b-a)*t;
@@ -19,18 +19,18 @@ export const worlds={
         1
       ],
       "style": 0,
-      "text": "Pravimo digitalne svetove kojima je svaki detalj važan.",
+      "text": "Ideje pokreću. Detalji ostaju.",
       "position": [
         0,
         0,
         0
       ],
-      "headline": "Pravimo digitalne svetove kojima je svaki detalj važan.",
+      "headline": "Ideje pokreću. Detalji ostaju.",
       "content": "sun"
     },
     {
       "id": "studio-story",
-      "name": "Naša priča",
+      "name": "Ljudi iza projekta",
       "kind": "Puna posvećenost",
       "radius": 1.1,
       "orbit": 7.1,
@@ -47,13 +47,13 @@ export const worlds={
       ],
       "style": 3,
       "content": "sun",
-      "headline": "Pravimo digitalne svetove kojima je svaki detalj važan.",
-      "text": "Pravimo digitalne svetove kojima je svaki detalj važan."
+      "headline": "Ideje pokreću. Detalji ostaju.",
+      "text": "Ideje pokreću. Detalji ostaju."
     },
     {
       "id": "studio-topic-0",
-      "name": "Posvećenost",
-      "kind": "Istraži detaljnije",
+      "name": "Puna pažnja",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Od prvog razgovora do detalja",
       "text": "Upoznajemo ideju i ostajemo uz projekat kroz dizajn, razvoj i testiranje.",
       "content": "sun",
@@ -70,7 +70,7 @@ export const worlds={
     {
       "id": "studio-topic-1",
       "name": "Naš pristup",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Izgled, brzina i svakodnevno korišćenje",
       "text": "Pažnju posvećujemo i prvom utisku i onome što korisnik radi svakog dana.",
       "content": "sun",
@@ -88,8 +88,8 @@ export const worlds={
   "websites": [
     {
       "id": "sun",
-      "name": "Sunce · Sajtovi",
-      "kind": "Središte ovog sveta",
+      "name": "Tvoj prostor na internetu",
+      "kind": "Naš pristup",
       "radius": 1.7,
       "orbit": 0,
       "angle": 0,
@@ -133,7 +133,7 @@ export const worlds={
     {
       "id": "websites-topic-0",
       "name": "Jasna struktura",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Da posetilac lako pronađe svoj put",
       "text": "Oblikujemo sadržaj i strukturu oko tvoje priče, ponude i sledećeg koraka.",
       "content": "neptune",
@@ -155,7 +155,7 @@ export const worlds={
     {
       "id": "websites-topic-1",
       "name": "Telefon i računar",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Dobro iskustvo na svakom ekranu",
       "text": "Prilagođavamo izgled, navigaciju i detalje različitim veličinama ekrana.",
       "content": "neptune",
@@ -178,8 +178,8 @@ export const worlds={
   "apps": [
     {
       "id": "sun",
-      "name": "Sunce · Aplikacije",
-      "kind": "Središte ovog sveta",
+      "name": "Od ideje do aplikacije",
+      "kind": "Naš pristup",
       "radius": 1.7,
       "orbit": 0,
       "angle": 0,
@@ -223,7 +223,7 @@ export const worlds={
     {
       "id": "apps-topic-0",
       "name": "Ideja i tokovi",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Šta korisnik želi da uradi?",
       "text": "Razrađujemo ideju i put kroz aplikaciju pre nego što krenemo u izradu.",
       "content": "uranus",
@@ -245,7 +245,7 @@ export const worlds={
     {
       "id": "apps-topic-1",
       "name": "Razvoj i testiranje",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Od prvog prikaza do detalja",
       "text": "Razvijamo dogovorene funkcije, proveravamo korišćenje i doterujemo iskustvo.",
       "content": "uranus",
@@ -268,8 +268,8 @@ export const worlds={
   "support": [
     {
       "id": "sun",
-      "name": "Sunce · Podrška",
-      "kind": "Središte ovog sveta",
+      "name": "Tu smo i posle objave",
+      "kind": "Naš pristup",
       "radius": 1.7,
       "orbit": 0,
       "angle": 0,
@@ -313,7 +313,7 @@ export const worlds={
     {
       "id": "support-topic-0",
       "name": "Sadržaj i ispravke",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Projekat nastavlja da živi",
       "text": "Ažuriramo sadržaj i rešavamo probleme u radu i prikazu.",
       "content": "mercury",
@@ -335,7 +335,7 @@ export const worlds={
     {
       "id": "support-topic-1",
       "name": "Dalji razvoj",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Nove potrebe. Sledeći korak.",
       "text": "Dogovaramo unapređenja i nove funkcije prema potrebama projekta.",
       "content": "mercury",
@@ -358,8 +358,8 @@ export const worlds={
   "process": [
     {
       "id": "sun",
-      "name": "Sunce · Način rada",
-      "kind": "Središte ovog sveta",
+      "name": "Pravimo zajedno",
+      "kind": "Naš pristup",
       "radius": 1.7,
       "orbit": 0,
       "angle": 0,
@@ -399,7 +399,7 @@ export const worlds={
     {
       "id": "process-topic-0",
       "name": "Razgovor i prvi prikaz",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Prvo razumemo ideju",
       "text": "Upoznajemo potrebe, dogovaramo obim i pokazujemo smer kroz prvi prikaz.",
       "content": "saturn",
@@ -416,7 +416,7 @@ export const worlds={
     {
       "id": "process-topic-1",
       "name": "Razvoj, testiranje i objava",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Pažljivo kroz svaku fazu",
       "text": "Gradimo, proveravamo i pripremamo projekat za objavu i dalju podršku.",
       "content": "saturn",
@@ -434,8 +434,8 @@ export const worlds={
   "contact": [
     {
       "id": "sun",
-      "name": "Sunce · Kontakt",
-      "kind": "Središte ovog sveta",
+      "name": "Jedan razgovor za početak",
+      "kind": "Naš pristup",
       "radius": 1.7,
       "orbit": 0,
       "angle": 0,
@@ -479,7 +479,7 @@ export const worlds={
     {
       "id": "contact-topic-0",
       "name": "Ispričaj ideju",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Ne moraš imati sve odgovore",
       "text": "Počni od onoga što želiš da napraviš. Zajedno ćemo razraditi sledeći korak.",
       "content": "venus",
@@ -501,7 +501,7 @@ export const worlds={
     {
       "id": "contact-topic-1",
       "name": "E-mail i telefon",
-      "kind": "Istraži detaljnije",
+      "kind": "Pažnja u svakom koraku",
       "headline": "Razgovarajmo",
       "text": "Kontaktiraj nas e-mailom ili telefonom i ispričaj nam šta ti je potrebno.",
       "content": "venus",
@@ -522,21 +522,39 @@ export const worlds={
     }
   ],
   "milica": [
-  {id:'sun',name:'Zona snage',kind:'Roze teretana · tegovi',radius:2,position:[-3.6,1,-1.4],color:[1,.35,.65],content:'milica',headline:'Snaga u roze.',text:'Tegovi, klupa i stalak za vežbanje na platformi među zvezdama.'},
+  {id:'sun',name:'Zona snage',kind:'Roze teretana · tegovi',radius:2,position:[-3.6,1,-1.4],color:[1,.35,.65],content:'milica',headline:'Upoznati osobu iza ideje.',text:'Milica je personalni trener za žene. Njen rad počiva na pažnji, podršci i planu prilagođenom svakoj klijentkinji.'},
   {id:'earth',name:'Miličina aplikacija',kind:'Projekat · lični trener',radius:1.8,position:[.35,3.05,-4.1],color:[1,.65,.8],content:'milica',href:'https://www.milicapersonaltrainer.com/',headline:'Miličin svet. Tvoj ritam.',text:'Otvori www.milicapersonaltrainer.com u novom tabu.'},
-  {id:'cardio',name:'Kardio zona',kind:'Roze teretana · pokret',radius:1.8,position:[3.15,.9,-.8],color:[1,.45,.7],content:'milica',headline:'Pokret među zvezdama.',text:'Roze trake za trčanje, neonsko svetlo i pogled na svemir.'},
-  {id:'stretch',name:'Zona istezanja',kind:'Roze teretana · ravnoteža',radius:1.7,position:[.2,.1,2.6],color:[1,.65,.8],content:'milica',headline:'Prostor za tvoj ritam.',text:'Roze strunjače i oprema za istezanje na otvorenoj svemirskoj platformi.'}
+  {id:'cardio',name:'Kardio zona',kind:'Roze teretana · pokret',radius:1.8,position:[3.15,.9,-.8],color:[1,.45,.7],content:'milica',headline:'Od njenog pristupa do aplikacije.',text:'Plan, treninzi i praćenje napretka povezani su u jedno iskustvo. Naš posao je da svaki korak bude razumljiv i prijatan.'},
+  {id:'stretch',name:'Zona istezanja',kind:'Roze teretana · ravnoteža',radius:1.7,position:[.2,.1,2.6],color:[1,.65,.8],content:'milica',headline:'Projekat kome se vraćamo.',text:'Slušamo povratne informacije, proveravamo prikaz i doterujemo detalje. Posvećenost se vidi i u malim ispravkama.'}
   ]
 };
 Object.entries(worlds).forEach(([id,list])=>{if(id!=='milica')list.forEach(b=>b.position=[Math.cos(b.angle)*b.orbit,0,Math.sin(b.angle)*b.orbit]);});
 export const bodies=worlds.studio;
 
 export function createSolar(canvas, options={}) {
-  let gl=canvas.getContext('webgl',{alpha:true,antialias:true,depth:true,powerPreference:'low-power'});
+  let gl=null;
+  try{gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:true,powerPreference:'low-power'});}catch(e){console.warn('World WebGL unavailable:',e);}
+  const originalGL=gl,fallbackCanvas=document.getElementById('solar-fallback');
+  let fallbackContext=null;
+  function useFallback(reason){
+    gl=null;lost=false;resources=null;
+    fallbackContext=fallbackCanvas.getContext('2d');
+    if(!fallbackContext)throw Error('World Canvas unavailable');
+    fallbackCanvas.hidden=false;canvas.style.opacity='0';canvas.dataset.renderer='canvas';
+    size(width,height,dpr);options.onInvalidate?.();
+    if(reason)console.warn('World switched to Canvas:',reason);
+  }
   let width=1,height=1,dpr=1,time=0,distance=180,focus=null,focusZoom=1,center=[0,0,0],lost=false,framing=0,focusMix=0,roll=0,viewInitialized=false;
   let world='studio',bodies=worlds.studio,overviewZoom=1,hovered=null,hoverPoint=null,forcedHover=null,lastYaw=0,lastPitch=0,lastProgress=0,previewedTouchId=null;
   let resources,images=new Map(),highRequested=new Set(),earthExtras=false;
-  const gymGeometry=createGymGeometry();
+  let gymGeometry=null;
+  function prepareGym(){
+    if(!gymGeometry)gymGeometry=createGymGeometry();
+    if(gl&&resources&&!resources.gymBuffers.length)resources.gymBuffers=gymGeometry.map(mesh=>{
+      const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,mesh.data,gl.STATIC_DRAW);
+      return {...mesh,buffer,count:mesh.data.length/10};
+    });
+  }
   let gymTime=3,gymPaused=false,gymSuppressed=false,gymState=workoutFrame(gymTime),workoutKey='';
   function updateWorkout(){
     gymState=workoutFrame(gymTime);
@@ -563,7 +581,7 @@ export function createSolar(canvas, options={}) {
   function setWorld(id){
     if(!worlds[id]||id===world)return false;
     world=id;bodies=worlds[id];focus=null;focusZoom=1;overviewZoom=1;clearHover();focusMix=0;viewInitialized=false;framing=0;
-    if(id==='milica'){gymTime=3;workoutKey='';updateWorkout();}
+    if(id==='milica'){prepareGym();gymTime=3;workoutKey='';updateWorkout();}
     canvas.dataset.world=id;canvas.dataset.focus='system';labels();options.onSelect?.(null);options.onInvalidate?.();return true;
   }
   function load(id,high=false){
@@ -627,6 +645,8 @@ export function createSolar(canvas, options={}) {
     select(id);
   }
   function init(){
+    // Some mobile GPUs cannot compile high precision fragment shaders.
+    if(gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT)?.precision===0)throw Error('Fragment precision unavailable');
     const derivatives=!!gl.getExtension('OES_standard_derivatives');
     function program(vs,fs){
       const p=gl.createProgram();for(const [type,source] of [[gl.VERTEX_SHADER,vs],[gl.FRAGMENT_SHADER,fs]]){
@@ -688,7 +708,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const ringMesh=[];for(let i=0;i<160;i++){const a=i/160*TAU,b=(i+1)/160*TAU;for(const [t,r] of [[a,1.24],[b,1.24],[a,2.48],[a,2.48],[b,1.24],[b,2.48]])ringMesh.push(Math.cos(t)*r,0,Math.sin(t)*r);}
     const ringBuffer=buffer(new Float32Array(ringMesh)),quad=buffer(new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]));
     const orbitBuffers=new Map(Object.entries(worlds).map(([id,list])=>[id,id==='milica'?[]:list.slice(1).map(b=>{const pts=[];for(let i=0;i<=192;i++){const a=i/192*TAU;pts.push(Math.cos(a)*b.orbit,0,Math.sin(a)*b.orbit);}return buffer(new Float32Array(pts));})]));
-    const gymBuffers=gymGeometry.map(mesh=>({...mesh,buffer:buffer(mesh.data),count:mesh.data.length/10}));
+    const gymBuffers=[];
     const textures=new Map();
     for(const id of [...new Set(Object.values(worlds).flat().map(b=>b.id)),'earth-night','earth-clouds']){
       const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
@@ -702,9 +722,10 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     }
     resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers,gymBuffers};
     for(const [key,image] of images)if(image.complete&&image.naturalWidth)upload(key.replace('-low',''),image,!key.endsWith('-low'));
-    canvas.dataset.renderer='webgl';
+    if(world==='milica')prepareGym();
+    canvas.dataset.renderer='webgl';fallbackCanvas.hidden=true;canvas.style.opacity='1';
   }
-  function size(w,h,pixelRatio){width=w;height=h;dpr=Math.min(pixelRatio,1.6);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);if(gl)gl.viewport(0,0,canvas.width,canvas.height);}
+  function size(w,h,pixelRatio){width=w;height=h;dpr=Math.min(pixelRatio,gl?1.6:1);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);if(gl)gl.viewport(0,0,canvas.width,canvas.height);else{fallbackCanvas.width=canvas.width;fallbackCanvas.height=canvas.height;}}
   const enabled=new Set();
   function attributes(position,uv=-1,...extra){
     for(const index of enabled)if(index!==position&&index!==uv&&!extra.includes(index)){gl.disableVertexAttribArray(index);enabled.delete(index);}
@@ -725,7 +746,13 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     return {distance,target:[...center],framing};
   }
   function render(state){
-    const {dt,yaw,pitch,progress,reducedMotion}=state;roll=state.roll||0;lastYaw=yaw;lastPitch=pitch;lastProgress=progress;
+    const {dt,yaw,pitch,progress,reducedMotion}=state;roll=state.roll||0;
+    canvas.style.opacity=gl?'1':'0';
+    if(world==='milica'&&!focus&&progress>.94){
+      // Reserve space beside the gym so the invitation never covers the title.
+      const compact=width<800,phoneWidth=height<550?76:compact?78:clamp(width*.1,105,145);
+      options.onProject?.({x:compact?width-105:width*.83,y:compact?Math.max(210,Math.min(245,height*.29)):height*.49,width:phoneWidth,paused:reducedMotion});
+    }else options.onProject?.(null);lastYaw=yaw;lastPitch=pitch;lastProgress=progress;
     if(lost)return;
     if(!reducedMotion)time+=dt;
     if(world==='milica'){gymSuppressed=reducedMotion;if(!reducedMotion&&!gymPaused)gymTime+=dt;updateWorkout();canvas.dataset.exercise=gymState.station.id;}
@@ -791,7 +818,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     }
   }
   function renderFallback(yaw,pitch){
-    const ctx=canvas.getContext('2d');if(!ctx)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    const ctx=fallbackContext;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
     if(world==='milica'){
       if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
       const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';
@@ -802,11 +829,11 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       const g=ctx.createRadialGradient(v.x-r*.28,v.y-r*.2,r*.1,v.x,v.y,r);g.addColorStop(0,`rgb(${b.color.map(c=>Math.round(c*255)).join(',')})`);g.addColorStop(1,'#070b14');ctx.fillStyle=g;ctx.beginPath();ctx.arc(v.x,v.y,r,0,TAU);ctx.fill();
     }updateLabels(yaw,pitch,1);
   }
-  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;});
-  canvas.addEventListener('webglcontextrestored',()=>{try{enabled.clear();init();lost=false;size(width,height,dpr);}catch(e){options.onError?.(e);}});
-  if(gl)init();else canvas.dataset.renderer='canvas';
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();useFallback('context lost');});
+  canvas.addEventListener('webglcontextrestored',()=>{try{gl=originalGL;enabled.clear();init();lost=false;size(width,height,dpr);options.onInvalidate?.();}catch(e){useFallback(e);}});
+  try{if(gl)init();else useFallback();}catch(e){useFallback(e);}
   // Procedural surfaces stay sharp at every zoom without texture downloads.
   canvas.dataset.focus='system';canvas.dataset.world=world;
-  return {render,camera,size,select,clearFocus,zoom,setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
+  return {render,camera,size,select,clearFocus,zoom,setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,recover:useFallback,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
 }
 

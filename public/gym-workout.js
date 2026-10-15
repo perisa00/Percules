@@ -91,9 +91,11 @@ function exercise(station,t){
     p.hands=[add(entry,[-.48,.38,.60]),add(entry,[.48,.38,.60])];
     p.feet=[add(entry,[-.25,.14,-.15]),add(entry,[.25,.14,-.15])];p.elbows=[[-.3,0,-1],[.3,0,-1]];
   }else if(id==='roller'){
-    p.root=[4.1,.48,3.47+Math.sin(t*1.8)*.08];p.lean=-.15;
-    p.feet=[[3.90,.87,2.45],[4.30,.87,2.45]];
-    p.hands=[[3.60,.12,3.96],[4.60,.12,3.96]];p.knees=[[0,1,-.1],[0,1,-.1]];p.elbows=[[-1,0,1],[1,0,1]];
+    p.root=[4.1,.40,3.47+Math.sin(t*1.8)*.08];p.lean=-.38;
+    // Targets follow the same local left/right convention as the turned torso.
+    p.feet=[at([4.1,0,2.55],yaw,[-.23,.87,0]),at([4.1,0,2.55],yaw,[.23,.87,0])];
+    p.hands=[at([4.1,0,3.87],yaw,[-.50,.12,0]),at([4.1,0,3.87],yaw,[.50,.12,0])];
+    p.knees=[[0,1,.1],[0,1,.1]];p.elbows=[[-1,0,-1],[1,0,-1]];
   }
   return p;
 }

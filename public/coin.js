@@ -72,6 +72,7 @@ void main(){
 
 function createCoin(canvas) {
   const host=canvas.parentElement;
+  if(host.closest('.topbar'))return;
   const fallback=host.querySelector('img');
   const gl=canvas.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:false,depth:true,powerPreference:'low-power'});
   if(!gl)return;

@@ -94,7 +94,7 @@ class SiteHTMLParser(HTMLParser):
             if href.lower().startswith("mailto:"):
                 self.mailto_links.append(href[7:].split("?", 1)[0])
 
-        if tag in {"img", "script", "source"} and "src" in data:
+        if tag in {"img", "script", "source", "video"} and "src" in data:
             src = data["src"].strip()
             self.references.append((tag, "src", src))
             if tag == "img":
@@ -327,8 +327,16 @@ def validate_runtime_resources(problems: list[str]) -> None:
         text = path.read_text(encoding="utf-8")
         if "<style>" in text or re.search(r'<script(?![^>]*src=)', text):
             problems.append(f"Inline code blocked by CSP: {path.name}")
-    if sum(p.stat().st_size for p in PUBLIC.rglob("*") if p.is_file()) > 3000000:
-        problems.append("Release exceeds 3 MB budget")
+    # The requested 51-second ad is optional media, never part of scene startup.
+    promo = PUBLIC / "assets/milica/promo-web-720.mp4"
+    if sum(p.stat().st_size for p in PUBLIC.rglob("*") if p.is_file() and p != promo) > 3000000:
+        problems.append("Scene release exceeds 3 MB budget")
+    if not promo.is_file() or promo.stat().st_size > 15000000:
+        problems.append("On-demand promo is missing or exceeds its 15 MB budget")
+    html = (PUBLIC / "index.html").read_text(encoding="utf-8")
+    video = re.search(r'<video\b[^>]*id="milica-promo"[^>]*>', html)
+    if not video or 'preload="none"' not in video[0] or 'autoplay' in video[0]:
+        problems.append("Promo must load on demand without autoplay")
     headers = (PUBLIC / "_headers").read_text()
     if "unsafe-inline" in headers or "unsafe-eval" in headers or "script-src 'self'" not in headers:
         problems.append("CSP was weakened")

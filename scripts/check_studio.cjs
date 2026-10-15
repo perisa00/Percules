@@ -17,12 +17,15 @@ getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:(p,name)=>({name
 uniformMatrix4fv:(u,transpose,v)=>{if(u.name==='uModel')gymUniforms.push(Array.from(v));},
 bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),drawArrays:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
-function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
+function element(){return {dataset:{},style:{setProperty(name,value){this[name]=value;}},children:[],listeners:{},hidden:false,
 setAttribute(){},addEventListener(type,fn){this.listeners[type]=fn;},replaceChildren(){this.children=[];},
 append(child){this.children.push(child);},getContext:()=>gl};}
 const labels=element(),emblem=element(),canvas=element(),selections=[],previews=[],portals=[],externalLinks=[];
+let fallbackDraws=0;
+const fallbackCanvas=element(),fallback2d=new Proxy({createRadialGradient:()=>({addColorStop(){}}),fill(){fallbackDraws++;}},{get:(o,k)=>k in o?o[k]:()=>{}});
+fallbackCanvas.getContext=()=>fallback2d;
 const context={Math,Map,Set,Float32Array,Uint16Array,Uint8Array,
-document:{getElementById:id=>id==='planet-labels'?labels:emblem,createElement:element},
+document:{getElementById:id=>id==='planet-labels'?labels:id==='solar-fallback'?fallbackCanvas:emblem,createElement:element},
 Image:function(){throw Error('Procedural studio must not download planetary images');}};
 vm.createContext(context);
 vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,worlds,bodies};',context);
@@ -108,9 +111,10 @@ solar.setWorld('milica');solar.activate('earth');assert.equal(externalLinks.at(-
 assert.equal(solar.isFocused(),false);
 console.log('Studio checks passed: seven separate galactic worlds, animated pink gym, mobile camera at 30/60/120 FPS, rendering, content and contact.');
 
-async function checkNavigation(reduced,coarse=false,useWebGL=false){
+async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   let now=0,sequence=0;
-  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar;
+  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore;
+  const corePromise=fault==='slow'||fault==='reject'?new Promise((resolve,reject)=>{resolveCore=resolve;rejectCore=reject;}):null;
   const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
   function node(id){
     if(nodes.has(id))return nodes.get(id);
@@ -122,7 +126,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   const document={body,hidden:false,getElementById:node,createElement:()=>element(),
     addEventListener:(type,fn)=>{if(!events.has(type))events.set(type,[]);events.get(type).push(fn);},
     dispatchEvent:event=>{if(event.type==='percules:scene')sceneEvents.push(event.detail);if(event.type==='percules:hover')hoverEvents.push(event.detail);for(const fn of events.get(event.type)||[])fn(event);}};
-  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,Image:function(){},
+  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,Image:function(){},corePromise,
     window:{open:url=>externalLinks.push(url)},document,innerWidth:390,innerHeight:844,devicePixelRatio:1,
     matchMedia:query=>({matches:query.includes('reduced-motion')?reduced:coarse,addEventListener(){}}),
     performance:{now:()=>now},CustomEvent:function(type,options){this.type=type;this.detail=options?.detail;},
@@ -130,15 +134,40 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=milica-gym-4')","Promise.resolve(solarModule)")
-    .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
-    .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)")
+  let script=galaxy.replace("import('./solar.js?v=studio-refresh-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+    .replace("import('./shield.js?v=19')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
+    .replace("import('./jump.js?v=17')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
   vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
   const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
+  if(fault){
+    const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+    if(fault==='context'){
+      node('galaxy').listeners.webglcontextlost({preventDefault(){}});tick(2);
+      assert.equal(node('galaxy').dataset.renderer,'canvas');assert.equal(node('galaxy-fallback').hidden,false);
+    }
+    navigate('apps');tick(150);
+    if(corePromise){
+      assert.equal(node('galaxy').dataset.loading,'true');assert.equal(body.dataset.scene,'galaxy','Keep the galaxy visible while the core is delayed');
+      if(fault==='reject')rejectCore(Error('simulated network interruption'));else resolveCore(context.solarModule);
+    }
+    await flush();tick(100);
+    assert.equal(node('galaxy').dataset.loading,'false');
+    if(fault==='reject'){
+      assert.equal(body.dataset.scene,'galaxy');assert.equal(node('render-error').hidden,false);
+      assert.ok(events.has('percules:navigate'),'Navigation remains available for retry');
+    }else{
+      assert.equal(body.dataset.scene,'system');assert.equal(body.dataset.world,'apps','Core world loads even when optional effects never respond');
+    }
+    if(fault==='context'){
+      node('galaxy').listeners.webglcontextrestored();tick(2);assert.equal(node('galaxy').dataset.renderer,'webgl');
+      assert.equal(node('galaxy-fallback').hidden,true);
+    }
+    return;
+  }
   const cameraSurface=node('galaxy');
   const key=(name,shiftKey=false)=>cameraSurface.listeners.keydown({key:name,shiftKey,preventDefault(){}});
   const gesture=(type,id,x,y,button=0,shiftKey=false)=>cameraSurface.listeners[type]({type,button,shiftKey,pointerId:id,clientX:x,clientY:y,timeStamp:now,pointerType:coarse?'touch':'mouse'});
@@ -258,9 +287,15 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   navigate('projects','jupiter');tick(reduced?3:70);assert.equal(body.dataset.world,'milica');assert.equal(body.dataset.scene,'system');
   assert.ok(!sceneEvents.some(event=>event.world==='projects'),'No intermediate project-planet scene');
   node('brand-home').listeners.click();tick(reduced?3:70);assert.equal(body.dataset.scene,'galaxy');assert.equal(body.dataset.theme,'space');
+  key('Home');tick(80);key('ArrowLeft');key('ArrowRight',true);tick(80);
+  const nearest=context.galaxyPoints().filter(p=>p.depth>.1&&p.x>=0&&p.x<=390&&p.y>=0&&p.y<=844).sort((a,b)=>Math.hypot(a.x-195,a.y-422)-Math.hypot(b.x-195,b.y-422))[0];
+  const expectedWorld=context.PerculesDestinations[nearest.id].world||nearest.id;
+  key('+');assert.equal(node('galaxy').dataset.zoomTarget,expectedWorld,'Zoom must choose the screen center after returning from Milica');
+  for(let i=0;i<12;i++)key('+');tick(120);
+  assert.equal(body.dataset.world,expectedWorld);assert.equal(body.dataset.scene,'system');
   assert.ok(sceneEvents.some(event=>event.world==='milica'));
   if(reduced)assert.ok(shieldFrames.every(age=>age<0),'Reduced motion should skip shield');
-  else assert.ok(shieldFrames.some(age=>age>=0),'Shared shield must run on the jump');
+  else if(useWebGL&&!coarse)assert.ok(shieldFrames.some(age=>age>=0),'Shared shield must run on the jump');
 }
 function checkTouch(){
  const handlers={};const main={addEventListener:(name,fn)=>handlers[name]=fn};
@@ -279,7 +314,38 @@ function checkTouch(){
  console.log('Touch checks passed: panel scrolling, edge containment, galaxy drag and multi-touch.');
 }
 checkTouch();
-checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true)).then(()=>{checkShaders();console.log('Navigation checks passed: stage-two arrivals, object preview and selection, touch/drag/pinch, pink project portal, return, reduced motion and single frame loop.');}).catch(error=>{console.error(error);process.exitCode=1;});
+checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true)).then(async()=>{
+  for(const fault of ['slow','reject','effects','context'])await checkNavigation(false,false,fault==='effects'||fault==='context',fault);
+  checkSolarRecovery();checkSound();checkShaders();console.log('Navigation and resilience checks passed: center zoom, slow/failed core, stalled effects, WebGL recovery, quiet opt-in audio and single frame loop.');
+}).catch(error=>{console.error(error);process.exitCode=1;});
+
+function checkSolarRecovery(){
+  for(const failure of ['no-webgl','shader','context']){
+    const surface=element();surface.getContext=type=>type==='2d'?null:failure==='no-webgl'?null:gl;
+    const original=gl.getShaderParameter;if(failure==='shader')gl.getShaderParameter=()=>false;
+    const renderer=createSolar(surface);gl.getShaderParameter=original;renderer.size(390,844,1);
+    if(failure==='context')surface.listeners.webglcontextlost({preventDefault(){}});
+    assert.equal(surface.dataset.renderer,'canvas','A dedicated Canvas must survive '+failure);
+    renderer.setWorld('apps');renderer.select('uranus');
+    renderer.camera({dt:1/60,target:[0,0,0],distance:44,reducedMotion:true});
+    const before=fallbackDraws;renderer.render({dt:1/60,yaw:.25,pitch:.73,progress:1,reducedMotion:true,viewPrepared:true});
+    assert.ok(fallbackDraws>before,'Fallback must actually draw the selected world');
+    if(failure==='context'){
+      surface.listeners.webglcontextrestored();assert.equal(surface.dataset.renderer,'webgl');
+      assert.equal(renderer.worldId(),'apps');assert.equal(renderer.focusId(),'uranus','Restore must retain the selected planet');
+    }
+  }
+}
+function checkSound(){
+  const oscillators=[];const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){},setTargetAtTime(){},cancelScheduledValues(){}});
+  const audio={currentTime:0,state:'running',destination:{},createGain:()=>({gain:param(),connect(){},disconnect(){}}),createBiquadFilter:()=>({frequency:param(),connect(){},disconnect(){}}),createOscillator:()=>{const o={frequency:param(),connect(){},disconnect(){},start(t){this.startAt=t;},stop(t){this.stopAt=t;}};oscillators.push(o);return o;}};
+  const scope={document:{getElementById:()=>null}};vm.createContext(scope);
+  vm.runInContext(fs.readFileSync('public/audio.js','utf8').replace('export function','function')+'\nglobalThis.make=createSoundEngine;',scope);
+  const sound=scope.make(audio);sound.jump();sound.select();assert.equal(oscillators.length,0,'Sound must be off until enabled');
+  sound.setEnabled(true);sound.scene(true);assert.equal(oscillators.length,0,'No ambient drone');sound.jump();sound.select();
+  assert.equal(oscillators.length,3);assert.ok(oscillators.every(o=>o.type==='sine'&&o.stopAt-o.startAt<.4),'Only short, finite cues');
+  sound.setEnabled(false);const count=oscillators.length;sound.select();assert.equal(oscillators.length,count);
+}
 
 function checkShaders(){
 assert.ok(shaderPairs.length>6,'Galaxy shaders must be captured alongside planetary shaders');
