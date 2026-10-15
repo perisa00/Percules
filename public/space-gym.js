@@ -1,3 +1,4 @@
+import {workoutFrame,workoutTransform,transformGymPoint} from './gym-workout.js?v=1';
 // Static buffers plus joint transforms, shared by WebGL and Canvas.
 export function createGymGeometry() {
   const meshes = new Map();
@@ -7,7 +8,7 @@ export function createGymGeometry() {
   let group = 'room';
   function face(points, normal, color, glow = 0) {
     if (!meshes.has(group)) meshes.set(group, []);
-    for (const i of [0, 1, 2, 0, 2, 3]) meshes.get(group).push(...points[i], ...normal, ...color, glow);
+    for (const i of [0, 1, 2, 0, 2, 3]) meshes.get(group).push(...points[i], ...(Array.isArray(normal[0])?normal[i]:normal), ...color, glow);
   }
   function box(x, y, z, w, h, d, color, glow = 0) {
     const a = x-w/2, b = x+w/2, c = y-h/2, e = y+h/2, f = z-d/2, g = z+d/2;
@@ -37,9 +38,8 @@ export function createGymGeometry() {
     const point=(a,b)=>[x+rx*Math.sin(b)*Math.cos(a),y+ry*Math.cos(b),z+rz*Math.sin(b)*Math.sin(a)];
     for(let j=0;j<10;j++)for(let i=0;i<16;i++){
       const a=i/16*Math.PI*2,c=(i+1)/16*Math.PI*2,b=j/10*Math.PI,d=(j+1)/10*Math.PI;
-      const middle=point((a+c)/2,(b+d)/2),normal=[(middle[0]-x)/(rx*rx),(middle[1]-y)/(ry*ry),(middle[2]-z)/(rz*rz)];
-      const length=Math.hypot(...normal);
-      face([point(a,b),point(c,b),point(c,d),point(a,d)],normal.map(v=>v/length),color);
+      const points=[point(a,b),point(c,b),point(c,d),point(a,d)],normals=points.map(p=>{const n=[(p[0]-x)/(rx*rx),(p[1]-y)/(ry*ry),(p[2]-z)/(rz*rz)],length=Math.hypot(...n);return n.map(v=>v/length);});
+      face(points,normals,color);
     }
   }
   function dumbbell(x,y,z,length=1.1,r=.24) {
@@ -52,7 +52,7 @@ export function createGymGeometry() {
   // Floating deck, luminous tile seams and a rose undercarriage.
   box(0,-.52,0,12.4,.5,9.5,dark);
   box(0,-.21,0,12,.15,9.2,rose);
-  for(let x=-5.5;x<=5.5;x++)for(let z=-4;z<=4;z++)box(x,-.1,z,.975,.07,.975,blush);
+  for(let x=-5.5;x<=5.5;x++)for(let z=-4;z<=4;z++)box(x,-.035,z,.975,.07,.975,blush);
   for(const x of [-6,6])box(x,0,0,.065,.07,9.2,neon,1);
   for(const z of [-4.6,4.6])box(0,0,z,12,.07,.065,neon,1);
   box(0,-.57,4.76,11.7,.06,.04,pale,1);
@@ -75,10 +75,14 @@ export function createGymGeometry() {
     box(x,.08,-2.4,.48,.16,2.5,rose);
     tube([x,.15,-3.25],[x,3.1,-3.25],.1,pale);
     for(let y=.65;y<2.7;y+=.35)box(x,y,-3.1,.13,.06,.15,dark);
+    tube([x,1.73,-3.25],[x,1.73,-2.60],.06,rose);tube([x,1.73,-2.60],[x,1.90,-2.60],.06,rose);
   }
   tube([-4.7,3.1,-3.25],[-2.1,3.1,-3.25],.085,rose);
-  tube([-5.25,2.05,-2.95],[-1.55,2.05,-2.95],.075,pale);
-  for(const x of [-4.95,-4.75,-2.05,-1.85])tube([x-.075,2.05,-2.95],[x+.075,2.05,-2.95],.46,rose,0,24);
+  group='barbell';motions.set(group,{zone:'sun',motion:'prop',part:'barbell'});
+  tube([-1.85,0,0],[1.85,0,0],.06,pale);
+  for(const x of [-1.55,-1.35,1.35,1.55])tube([x-.075,0,0],[x+.075,0,0],.40,rose,0,24);
+  for(const x of [-1.65,1.65])tube([x-.025,0,0],[x+.025,0,0],.26,blush,0,20);
+  group='sun';
   // Upholstered bench in front of the rack.
   box(-3.4,.72,-1.9,.85,.23,2.25,rose);
   box(-3.4,.86,-1.9,.81,.07,2.15,blush);
@@ -89,7 +93,7 @@ export function createGymGeometry() {
     box(-4.9,y,1.5,.8,.12,2.7,rose);
     for(const z of [.5,1.4,2.3])dumbbell(-4.9,y+.23,z,.93,.20);
   }
-  dumbbell(-2.5,.27,.5);dumbbell(-2.5,.27,1.2);
+  for(const part of ['dumbbellL','dumbbellR']){group=part;motions.set(group,{zone:'sun',motion:'prop',part});dumbbell(0,0,0,.69,.18);}
 
   group='cardio';
   for(const x of [2.05,4.25]) {
@@ -116,52 +120,52 @@ export function createGymGeometry() {
     box(x,.08,2.5,1.4,.025,2.65,blush);
     for(const z of [1.4,3.6])box(x,.1,z,1.1,.015,.035,pale);
   }
-  tube([3.5,.37,2.7],[4.7,.37,2.7],.35,rose,0,24);
-  tube([4.72,.37,2.7],[4.76,.37,2.7],.16,dark,0,20);
-  box(2.9,.18,3.7,.55,.36,.8,blush);
-  box(3.6,.18,3.7,.55,.36,.8,rose);
+  box(.67,.26,3.1,.4,.32,.55,blush);
+  box(1.63,.26,3.1,.4,.32,.55,rose);
+  group='roller';motions.set(group,{zone:'stretch',motion:'prop',part:'roller'});
+  tube([-.6,0,0],[.6,0,0],.35,rose,0,24);
+  tube([.62,0,0],[.66,0,0],.16,dark,0,20);
+  for(let i=0;i<10;i++){const a=i*Math.PI/5;tube([-.58,Math.cos(a)*.35,Math.sin(a)*.35],[.58,Math.cos(a)*.35,Math.sin(a)*.35],.018,blush,0,6);}
   // A kettlebell with a loop handle.
-  tube([3.25,.25,1.5],[3.25,.65,1.5],.3,rose,0,20);
+  group='kettle';motions.set(group,{zone:'stretch',motion:'prop',part:'kettle'});
+  ellipsoid(0,-.42,0,.27,.28,.25,rose);
   for(let i=0;i<16;i++) {
     const a=i/16*Math.PI*2,b=(i+1)/16*Math.PI*2;
-    tube([3.25+Math.cos(a)*.22,.83+Math.sin(a)*.23,1.5],[3.25+Math.cos(b)*.22,.83+Math.sin(b)*.23,1.5],.055,pale,0,6);
+    tube([Math.cos(a)*.22,-.12+Math.sin(a)*.16,0],[Math.cos(b)*.22,-.12+Math.sin(b)*.16,0],.045,pale,0,6);
   }
 
-  // Stylized Milica: a ponytail, pink training clothes and two curling dumbbells.
-  // Arms and weights share their elbow pivot, so the weights stay in her hands.
-  group='trainer';motions.set(group,{zone:'sun',motion:'trainer'});
-  const cx=-.65,cz=.05,skin=[1,.68,.82],hair=[.38,.055,.19];
-  for(const side of [-1,1]){
-    const x=cx+side*.18;
-    tube([x,1.23,cz],[x+side*.03,.72,cz+.04],.14,rose);
-    ellipsoid(x+side*.03,.72,cz+.04,.135,.14,.135,rose);
-    tube([x+side*.03,.72,cz+.04],[x+side*.05,.22,cz],.10,rose);
-    ellipsoid(x+side*.05,.13,cz+.10,.14,.12,.25,pale);
-    box(x+side*.05,.05,cz+.10,.27,.05,.43,neon);
+  // Separate smooth body segments follow the shared inverse-kinematics rig.
+  for(let side=0;side<2;side++)for(let ring=0;ring<2;ring++){
+    group='foot-shadow-'+side+'-'+ring;motions.set(group,{motion:'shadow',side,opacity:ring?.12:.07});
+    const r=ring?.20:.31;
+    for(let i=0;i<24;i++){const a=i*Math.PI/12,b=(i+1)*Math.PI/12;face([[0,0,0],[Math.cos(b)*r,0,Math.sin(b)*r*1.35],[Math.cos(a)*r,0,Math.sin(a)*r*1.35],[0,0,0]],[0,1,0],dark,1);}
   }
-  ellipsoid(cx,1.30,cz,.32,.25,.21,rose);
-  ellipsoid(cx,1.76,cz,.29,.40,.19,skin);
-  ellipsoid(cx,2.01,cz,.34,.27,.21,rose);
-  box(cx,1.83,cz+.03,.55,.10,.36,dark);
-  tube([cx,2.15,cz],[cx,2.42,cz],.10,skin);
-  ellipsoid(cx,2.64,cz,.225,.28,.215,skin);
-  ellipsoid(cx,2.72,cz-.12,.235,.27,.15,hair);
-  ellipsoid(cx,2.86,cz-.01,.23,.10,.19,hair);
-  for(const side of [-1,1])ellipsoid(cx+side*.075,2.65,cz+.202,.022,.026,.015,hair);
-  box(cx,2.52,cz+.211,.072,.018,.015,rose);
-  tube([cx,2.76,cz-.25],[cx+.08,2.57,cz-.48],.10,hair);
-  tube([cx+.08,2.57,cz-.48],[cx+.14,2.17,cz-.42],.085,hair);
+  const skin=[1,.68,.82],hair=[.38,.055,.19];
+  const part=name=>{group='milica-'+name;motions.set(group,{motion:'rig',part:name});};
+  part('pelvis');ellipsoid(0,.02,0,.29,.20,.19,rose);ellipsoid(0,.17,0,.235,.08,.165,dark);
+  part('torso');ellipsoid(0,.35,0,.23,.28,.165,skin);ellipsoid(0,.61,0,.29,.22,.19,rose);
+  ellipsoid(0,.43,.006,.235,.06,.177,dark);
+  for(const side of [-1,1])tube([side*.20,.62,.13],[side*.20,.80,-.03],.045,blush);
+  tube([0,.75,0],[0,.94,0],.09,skin);
+  part('head');ellipsoid(0,.17,0,.20,.25,.19,skin);
+  ellipsoid(0,.23,-.10,.211,.23,.14,hair);ellipsoid(0,.37,-.015,.205,.08,.17,hair);
   for(const side of [-1,1]){
-    const x=cx+side*.43;
-    ellipsoid(cx+side*.33,2.13,cz,.14,.15,.14,skin);
-    tube([cx+side*.33,2.13,cz],[x,1.68,cz+.03],.105,skin);
-    ellipsoid(x,1.68,cz+.03,.11,.11,.11,skin);
-    group=side<0?'curl-left':'curl-right';
-    motions.set(group,{zone:'sun',motion:'curl',pivot:[x,1.68,cz+.03],phase:side<0?0:.35});
-    tube([x,1.68,cz+.03],[x,1.12,cz+.03],.085,skin);
-    ellipsoid(x,1.10,cz+.03,.095,.10,.09,skin);
-    dumbbell(x,1.09,cz+.04,.65,.16);
-    group='trainer';
+    ellipsoid(side*.068,.19,.178,.019,.024,.014,hair);
+    ellipsoid(side*.20,.15,0,.04,.06,.04,skin);
+    tube([side*.041,.24,.177],[side*.09,.25,.171],.008,hair,0,6);
+  }
+  ellipsoid(0,.13,.187,.029,.035,.025,skin);
+  tube([-.035,.062,.18],[.035,.062,.18],.012,rose,0,8);
+  part('hair');ellipsoid(0,0,-.05,.10,.10,.12,hair);ellipsoid(.025,-.20,-.12,.09,.25,.095,hair);
+  tube([0,-.03,-.08],[0,-.04,-.08],.108,neon,0,12);
+  for(const suffix of ['L','R']){
+    part('upperArm'+suffix);ellipsoid(0,.03,0,.12,.13,.12,skin);ellipsoid(0,.25,0,.095,.26,.095,skin);
+    part('forearm'+suffix);ellipsoid(0,.01,0,.085,.085,.085,skin);ellipsoid(0,.25,0,.075,.25,.075,skin);
+    part('hand'+suffix);ellipsoid(0,-.02,0,.075,.10,.065,skin);
+    part('thigh'+suffix);ellipsoid(0,.20,0,.145,.35,.145,rose);ellipsoid(0,.46,0,.12,.14,.12,rose);
+    part('shin'+suffix);ellipsoid(0,0,0,.115,.10,.115,rose);ellipsoid(0,.27,0,.09,.29,.09,rose);
+    part('shoe'+suffix);ellipsoid(0,-.025,.075,.125,.10,.23,pale);box(0,-.105,.075,.24,.035,.39,blush);
+    for(const z of [.08,.13,.18])box(0,.057,z,.12,.012,.015,rose);
   }
 
   group='earth';
@@ -181,22 +185,26 @@ export function createGymGeometry() {
   return [...meshes].map(([id,data])=>({id,zone:id,...motions.get(id),data:new Float32Array(data)}));
 }
 
-export function gymPose(mesh,time) {
-  const bob=.012*Math.sin(time*1.8);
-  if(mesh.motion==='belt')return {offset:[0,0,-1.72+(time*.9+mesh.phase)%2.4],pivot:[0,0,0],angle:0};
-  if(mesh.motion==='curl')return {offset:[0,bob,0],pivot:mesh.pivot,angle:-.35-(1-Math.cos(time*1.8+mesh.phase))*.975};
-  return {offset:[0,mesh.motion==='trainer'?bob:0,0],pivot:[0,0,0],angle:0};
+export function gymPose(mesh,time,frame=workoutFrame(time)) {
+  if(mesh.motion==='belt')return {matrix:workoutTransform([0,0,-1.72+(time*.9+mesh.phase)%2.4]),zone:'cardio'};
+  if(mesh.motion==='rig')return {matrix:frame.models[mesh.part],zone:frame.station.zone};
+  if(mesh.motion==='prop')return {matrix:frame.props[mesh.part],zone:mesh.zone};
+  if(mesh.motion==='shadow'){
+    const p=frame.joints.feet[mesh.side],floor=p[0]>1.3&&p[0]<5.1&&p[2]>-1.8&&p[2]<.8?.407:p[0]>-1.65&&p[0]<1.95&&p[2]>1.1&&p[2]<3.9?.107:.012;
+    return {matrix:workoutTransform([p[0],floor,p[2]],frame.pose.yaw),zone:frame.station.zone,opacity:mesh.opacity};
+  }
+  return {matrix:workoutTransform(),zone:mesh.zone};
 }
 
-export function drawGymFallback(ctx, meshes, project, focusId,time=0) {
+export function drawGymFallback(ctx, meshes, project, focusId,time=0,frame=workoutFrame(time)) {
   const triangles=[];
   for(const mesh of meshes){
-    const pose=gymPose(mesh,time),c=Math.cos(pose.angle),s=Math.sin(pose.angle),p=pose.pivot,o=pose.offset;
+    const pose=gymPose(mesh,time,frame),m=pose.matrix;
     for(let i=0;i<mesh.data.length;i+=30) {
-    const d=mesh.data,points=[0,10,20].map(j=>{const y=d[i+j+1]-p[1],z=d[i+j+2]-p[2];return project([d[i+j]+o[0],y*c-z*s+p[1]+o[1],y*s+z*c+p[2]+o[2]]);});
+    const d=mesh.data,points=[0,10,20].map(j=>project(transformGymPoint(m,[d[i+j],d[i+j+1],d[i+j+2]])));
     if(points.some(p=>p.depth<=0))continue;
-    const light=.55+Math.max(0,d[i+4]*c-d[i+5]*s)*.35+d[i+9]*.4;
-    triangles.push({points,depth:points.reduce((s,p)=>s+p.depth,0)/3,color:[d[i+6],d[i+7],d[i+8]].map(v=>Math.min(255,Math.round(v*light*255))),alpha:focusId&&mesh.zone!==focusId?.4:1});
+    const light=.55+Math.max(0,m[1]*d[i+3]+m[5]*d[i+4]+m[9]*d[i+5])*.35+d[i+9]*.4;
+    triangles.push({points,depth:points.reduce((s,p)=>s+p.depth,0)/3,color:[d[i+6],d[i+7],d[i+8]].map(v=>Math.min(255,Math.round(v*light*255))),alpha:(focusId&&pose.zone!==focusId?.4:1)*(pose.opacity??1)});
     }
   }
   triangles.sort((a,b)=>b.depth-a.depth);

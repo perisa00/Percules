@@ -206,6 +206,9 @@ body[data-flight="active"] #galaxy-destinations button,body[data-flight="alignin
 @media(max-height:550px){#galaxy-destinations{top:90px;column-gap:16px}}
 
 /* Milica's gym has a complete rose palette, including overlays and navigation. */
+#gym-workout{position:absolute;bottom:128px;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:space-between;gap:24px;width:390px;max-width:calc(100% - 42px);color:#ffd1e5}
+.workout-copy{display:flex;flex-direction:column;gap:5px;min-width:0}.workout-copy span{font-size:7px;letter-spacing:1.6px;color:#d493b1}.workout-copy strong{font-size:12px;font-weight:400;white-space:nowrap}.workout-controls{display:flex;gap:5px}.workout-controls button{width:36px;height:36px;border:1px solid #f58cb53b;border-radius:50%;background:#41132c99;color:#ffd1e5;font-size:21px}.workout-controls button:hover{background:#a0346555;border-color:#f5a2ca88}#gym-pause{font-size:14px}.workout-controls button:disabled{opacity:.45;cursor:default}body[data-detail="open"] #gym-workout,body[data-flight="active"] #gym-workout{display:none}
+@media(max-width:800px){#gym-workout{bottom:128px;width:auto;left:26px;right:26px;transform:none;max-width:none;gap:8px}.workout-copy strong{font-size:11px}.workout-copy span{font-size:6px;letter-spacing:1px}.workout-controls{gap:4px}.workout-controls button{width:34px;height:36px}}
 #planet-nav a{flex-shrink:0;display:flex;align-items:center;min-height:44px;padding:10px 15px;border-radius:24px;color:#f5b7d3;text-decoration:none;font-size:12px;transition:background .25s,color .25s}
 #planet-nav a:hover{color:#ffe2ee;background:#a0346555}
 body[data-theme="pink"] #planet-labels,body[data-theme="pink"] .object-preview{display:none}

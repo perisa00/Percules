@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const source=fs.readFileSync('public/space-gym.js','utf8')+'\n'+fs.readFileSync('public/solar.js','utf8').replace(/^import .*;\r?\n/m,'');
+const source=['gym-workout.js','space-gym.js','solar.js'].map(file=>fs.readFileSync('public/'+file,'utf8').replace(/^import .*;\r?\n/gm,'')).join('\n');
 const shaderPairs=[],draws=[],uploads=[],gymUniforms=[],viewUniforms=new Map();
 let currentSources=[],id=0;
 const gl=new Proxy({
@@ -14,6 +14,7 @@ getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
 getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:(p,name)=>({name}),uniform3fv:(u,v)=>{viewUniforms.set(u.name,Array.from(v));if(u.name==='uOffset')gymUniforms.push(Array.from(v));},uniform1f:(u,v)=>{viewUniforms.set(u.name,v);if(u.name==='uAngle')gymUniforms.push(v);},
+uniformMatrix4fv:(u,transpose,v)=>{if(u.name==='uModel')gymUniforms.push(Array.from(v));},
 bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),drawArrays:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
 function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
@@ -30,7 +31,7 @@ assert.equal(Object.keys(worlds).length,7);assert.equal(worlds.milica.length,4);
 const gymMeshes=vm.runInContext('createGymGeometry()',context);
 assert.deepEqual(Array.from(gymMeshes.filter(mesh=>!mesh.motion),mesh=>mesh.id).sort(),['cardio','earth','room','stretch','sun']);
 assert.equal(gymMeshes.filter(mesh=>mesh.motion==='belt').length,24,'Both treadmill belts need moving treads');
-assert.equal(gymMeshes.filter(mesh=>mesh.motion==='curl').length,2,'Both weights must follow the trainer elbows');
+assert.ok(gymMeshes.some(mesh=>mesh.part==='handL')&&gymMeshes.some(mesh=>mesh.part==='handR'),'The trainer needs articulated hands for each station');
 for(const mesh of gymMeshes){
   assert.equal(mesh.data.length%30,0,'Gym buffers must contain complete triangles');
   assert.ok(mesh.data.every(Number.isFinite),'Gym vertices must be finite');
@@ -69,6 +70,9 @@ const gymFrame=reduced=>{gymUniforms.length=0;solar.render({dt:.25,yaw:.25,pitch
 const movingA=gymFrame(false),movingB=gymFrame(false);assert.notEqual(movingA,movingB,'Belt and weight poses must advance');
 assert.equal(gymFrame(true),movingB,'Reduced motion and pause must freeze equipment and trainer');
 assert.equal(gymFrame(true),movingB,'A paused frame must not reset the pose');
+solar.pauseWorkout();assert.equal(gymFrame(false),movingB,'The workout pause freezes the whole routine');
+solar.stepWorkout(1);assert.equal(canvas.dataset.exercise,'curls');gymFrame(false);assert.equal(canvas.dataset.exercise,'bench');
+solar.stepWorkout(-1);gymFrame(false);assert.equal(canvas.dataset.exercise,'curls');solar.pauseWorkout();
 solar.hover('sun');assert.equal(previews.at(-1),null,'No hover panels should cover the gym');
 solar.activate('cardio',true);assert.equal(solar.focusId(),'cardio','Gym controls should work with one tap');
 solar.zoom(2500);assert.equal(solar.isFocused(),false);
@@ -126,7 +130,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=milica-gym-2')","Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=milica-gym-3')","Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');

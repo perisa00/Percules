@@ -165,6 +165,7 @@
     el('back-system').textContent=pink?'← Cela teretana':'← Ceo sistem';
     el('back-studio').hidden=true;
     planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
+    el('gym-workout').hidden=!(pink&&system);
     el('planet-labels').hidden=!system||pink;
     el('gesture-hint').textContent=system?(pink?'IZABERI ZONU ISPOD · PREVUCI ZA ROTACIJU':coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
     if(galaxy||scene==='travel')el('studio-emblem').hidden=true;
@@ -204,12 +205,16 @@
   function ensureSolar(){
     if(solar||solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=milica-gym-2').then(async module=>{
+    solarLoading=import('./solar.js?v=milica-gym-3').then(async module=>{
       try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
       catch(e){console.warn('Arrival shield unavailable:',e);}
       try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}
       catch(e){console.warn('Jump effect unavailable:',e);}
-      solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onExternal:url=>window.open(url,'_blank','noopener,noreferrer'),onHover:detail=>document.dispatchEvent(new CustomEvent('percules:hover',{detail})),onDestination:world=>changeWorld(world),onSelect:body=>{
+      solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onWorkout:state=>{
+        el('gym-workout-name').textContent=state.name;
+        el('gym-workout-count').textContent=(state.stage==='Sledeća stanica'?'SLEDEĆA STANICA':'MILICA TRENIRA')+' · '+String(state.index+1).padStart(2,'0')+' / '+String(state.count).padStart(2,'0');
+        const paused=state.paused||motion.matches;el('gym-pause').textContent=paused?'▷':'Ⅱ';el('gym-pause').setAttribute('aria-pressed',String(paused));el('gym-pause').setAttribute('aria-label',paused?'Nastavi trening':'Pauziraj trening');el('gym-pause').disabled=motion.matches;
+      },onExternal:url=>window.open(url,'_blank','noopener,noreferrer'),onHover:detail=>document.dispatchEvent(new CustomEvent('percules:hover',{detail})),onDestination:world=>changeWorld(world),onSelect:body=>{
         if(body){if(!arrival&&!worldFlight)cancelTeleport();sound({type:'select'});}focusedBody=body;vx=vy=0;
         if(body){const angle=body.id==='sun'?.25:Math.hypot(body.position[0],body.position[2])<.001?-.65:Math.atan2(-body.position[0],-body.position[2])+.6;toYaw=yaw+Math.atan2(Math.sin(angle-yaw),Math.cos(angle-yaw));toPitch=.32;}
         else {toPitch=.73;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));}
@@ -786,7 +791,7 @@
     solarAnchor=flowPoint(solarPoint);
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
-    const systemFit=solar?.worldId()==='milica'?Math.max(width<800&&height<700?38:24,20/(width/height)):Math.max(44,46/(width/height));
+    const systemFit=solar?.worldId()==='milica'?Math.max(width<800&&height<700?44:28,22/(width/height)):Math.max(44,46/(width/height));
     worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);
@@ -898,6 +903,9 @@
   el('back-system').addEventListener('click',()=>{solar?.clearFocus();toZoom=.06;wake();});
   el('zoom-in').addEventListener('click',()=>changeZoom(-260));el('zoom-out').addEventListener('click',()=>changeZoom(260));
   el('motion-toggle').addEventListener('click',toggleMotion);
+  el('gym-previous').addEventListener('click',()=>{solar?.stepWorkout(-1);wake();});
+  el('gym-next').addEventListener('click',()=>{solar?.stepWorkout(1);wake();});
+  el('gym-pause').addEventListener('click',()=>{if(!breathingEnabled&&!motion.matches){toggleMotion();solar?.pauseWorkout(false);}else solar?.pauseWorkout();wake();});
   el('about-toggle').addEventListener('click',()=>{const panel=el('about-panel');panel.hidden=!panel.hidden;el('about-toggle').setAttribute('aria-expanded',String(!panel.hidden));});
   document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;if(e.key==='Escape'){el('about-panel').hidden=true;el('about-toggle').setAttribute('aria-expanded','false');if(focusedBody)solar.clearFocus();wake();}});
   addEventListener('resize',resize);

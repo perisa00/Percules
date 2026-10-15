@@ -1,4 +1,5 @@
-import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=2';
+import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=3';
+import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=1';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a+(b-a)*t;
@@ -536,6 +537,15 @@ export function createSolar(canvas, options={}) {
   let world='studio',bodies=worlds.studio,overviewZoom=1,hovered=null,hoverPoint=null,forcedHover=null,lastYaw=0,lastPitch=0,lastProgress=0,previewedTouchId=null;
   let resources,images=new Map(),highRequested=new Set(),earthExtras=false;
   const gymGeometry=createGymGeometry();
+  let gymTime=3,gymPaused=false,gymSuppressed=false,gymState=workoutFrame(gymTime),workoutKey='';
+  function updateWorkout(){
+    gymState=workoutFrame(gymTime);
+    const key=gymState.index+gymState.stage+gymPaused+gymSuppressed;
+    const displayIndex=(gymState.index+(gymState.stage==='Sledeća stanica'?1:0))%workoutStations.length;
+    if(key!==workoutKey){workoutKey=key;options.onWorkout?.({name:workoutStations[displayIndex].name,index:displayIndex,count:workoutStations.length,stage:gymState.stage,paused:gymPaused||gymSuppressed});}
+  }
+  function stepWorkout(direction){gymTime=((gymState.index+direction+workoutStations.length)%workoutStations.length)*WORKOUT_SLOT+3;updateWorkout();options.onInvalidate?.();}
+  function pauseWorkout(paused=!gymPaused){gymPaused=paused;updateWorkout();options.onInvalidate?.();}
   const labelRoot=document.getElementById('planet-labels');
   const labelButtons=new Map();
   function labels(){
@@ -553,6 +563,7 @@ export function createSolar(canvas, options={}) {
   function setWorld(id){
     if(!worlds[id]||id===world)return false;
     world=id;bodies=worlds[id];focus=null;focusZoom=1;overviewZoom=1;clearHover();focusMix=0;viewInitialized=false;framing=0;
+    if(id==='milica'){gymTime=3;workoutKey='';updateWorkout();}
     canvas.dataset.world=id;canvas.dataset.focus='system';labels();options.onSelect?.(null);options.onInvalidate?.();return true;
   }
   function load(id,high=false){
@@ -663,7 +674,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       `precision mediump float;uniform float uAlpha;void main(){gl_FragColor=vec4(.40,.50,.66,uAlpha);}`);
     const corona=program(`attribute vec2 aPosition;uniform vec2 uCenter;uniform vec2 uSize;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(uCenter+aPosition*uSize,0.,1.);}`,
       `precision highp float;varying vec2 vUv;uniform float uTime,uOpacity;uniform vec3 uTint;void main(){float r=length(vUv),a=r>.0001?atan(vUv.y,vUv.x):0.;float ray=.72+.18*sin(a*17.+sin(a*7.+uTime*.12)*1.8)+.1*sin(a*31.-uTime*.15);float outer=exp(-r*5.5)*ray;float rim=exp(-abs(r-.285)*24.)*.21;float alpha=(outer*.45+rim)*(1.-smoothstep(.75,1.,r));gl_FragColor=vec4(uTint*alpha*uOpacity,alpha*uOpacity);}`);
-    const gym=program(`precision highp float;attribute vec3 aPosition,aNormal,aColor;attribute float aGlow;uniform vec3 uOffset,uPivot;uniform float uAngle;varying vec3 vColor,vNormal,vWorld;varying float vGlow;${view}void main(){float c=cos(uAngle),s=sin(uAngle);vec3 p=aPosition-uPivot;vWorld=vec3(p.x,p.y*c-p.z*s,p.y*s+p.z*c)+uPivot+uOffset;vNormal=vec3(aNormal.x,aNormal.y*c-aNormal.z*s,aNormal.y*s+aNormal.z*c);vColor=aColor;vGlow=aGlow;gl_Position=project(vWorld);}`,
+    const gym=program(`precision highp float;attribute vec3 aPosition,aNormal,aColor;attribute float aGlow;uniform mat4 uModel;varying vec3 vColor,vNormal,vWorld;varying float vGlow;${view}void main(){vWorld=(uModel*vec4(aPosition,1.)).xyz;vNormal=mat3(uModel)*aNormal;vColor=aColor;vGlow=aGlow;gl_Position=project(vWorld);}`,
       `precision highp float;varying vec3 vColor,vNormal,vWorld;varying float vGlow;uniform vec3 uEye;uniform float uOpacity;void main(){vec3 n=normalize(vNormal),l=normalize(vec3(-3.,8.,5.)-vWorld),e=normalize(uEye-vWorld);float diffuse=max(dot(n,l),0.);float spec=pow(max(dot(n,normalize(l+e)),0.),36.);vec3 color=vColor*(.48+diffuse*.5)+vec3(1.,.49,.72)*spec*.25;color=mix(color,vColor*1.12,vGlow);gl_FragColor=vec4(color,uOpacity);}`);
     const backdrop=program(`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(aPosition,.999,1.);}`,
       `precision highp float;varying vec2 vUv;uniform vec2 uResolution;uniform float uYaw,uPitch;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 p=(vUv+1.)*.5*uResolution+vec2(uYaw*16.,uPitch*12.);vec2 cell=floor(p/28.),uv=fract(p/28.);float h=hash(cell),s=0.;if(h>.71){vec2 pos=vec2(hash(cell+3.7),hash(cell+8.1));float d=length((uv-pos)*28.);s=exp(-d*d*1.9)*(.2+h*.35);}float haze=exp(-pow((vUv.y+vUv.x*.32)*3.2,2.))*.009;gl_FragColor=vec4(vec3(.001,.002,.006)+vec3(.53,.66,.91)*s+vec3(.15,.23,.48)*haze,1.);}`);
@@ -686,7 +697,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const programs={surface,atmosphere,ring,orbit,corona,backdrop,gym,pinkSky},locations=new Map();
     for(const p of Object.values(programs)){
       const u={};for(const name of ['uLight','uStyle','uRoll','uOpacity','uTarget','uYaw','uPitch','uDistance','uAspect','uFraming','uCenter','uRadius','uSpin','uTilt','uEye','uTint','uSun','uEarth','uSaturn','uTime','uMap','uNight','uClouds','uHasMap','uHasNight','uHasClouds','uSize','uAlpha','uResolution'])u[name]=gl.getUniformLocation(p,name);
-      for(const name of ['uOffset','uPivot','uAngle'])u[name]=gl.getUniformLocation(p,name);
+      u.uModel=gl.getUniformLocation(p,'uModel');
       u.position=gl.getAttribLocation(p,'aPosition');u.uv=gl.getAttribLocation(p,'aUv');u.normal=gl.getAttribLocation(p,'aNormal');u.color=gl.getAttribLocation(p,'aColor');u.glow=gl.getAttribLocation(p,'aGlow');locations.set(p,u);
     }
     resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers,gymBuffers};
@@ -717,6 +728,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const {dt,yaw,pitch,progress,reducedMotion}=state;roll=state.roll||0;lastYaw=yaw;lastPitch=pitch;lastProgress=progress;
     if(lost)return;
     if(!reducedMotion)time+=dt;
+    if(world==='milica'){gymSuppressed=reducedMotion;if(!reducedMotion&&!gymPaused)gymTime+=dt;updateWorkout();canvas.dataset.exercise=gymState.station.id;}
     if(!state.viewPrepared)camera({dt,target:[0,0,0],distance:Math.max(44,46/(width/height)),reducedMotion});
     if(!gl){renderFallback(yaw,pitch);publishHover();return;}
     const {programs:p,locations,textures}=resources;
@@ -732,8 +744,9 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       u=use(p.gym);
       for(const mesh of resources.gymBuffers){
         // Keep the architecture visible while a selected station is explored.
-        gl.uniform1f(u.uOpacity,focus&&mesh.zone!==focus.id?1-focusMix*.65:1);
-        const pose=gymPose(mesh,time);gl.uniform3fv(u.uOffset,pose.offset);gl.uniform3fv(u.uPivot,pose.pivot);gl.uniform1f(u.uAngle,pose.angle);
+        const pose=gymPose(mesh,gymTime,gymState);
+        gl.uniform1f(u.uOpacity,(focus&&pose.zone!==focus.id?1-focusMix*.65:1)*(pose.opacity??1));
+        gl.uniformMatrix4fv(u.uModel,false,pose.matrix);
         gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);attributes(u.position,-1,u.normal,u.color,u.glow);
         gl.vertexAttribPointer(u.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(u.normal,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(u.color,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(u.glow,1,gl.FLOAT,false,40,36);
         gl.drawArrays(gl.TRIANGLES,0,mesh.count);
@@ -783,7 +796,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
       const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';
       for(let i=0;i<110;i++){const x=((i*137.51+yaw*12)%width+width)%width,y=((i*i*37.71+pitch*12)%height+height)%height;ctx.fillRect(x,y,i%7===0?2:1,i%7===0?2:1);}
-      ctx.globalAlpha=1;drawGymFallback(ctx,gymGeometry,p=>project(p,yaw,pitch),focus?.id,time);updateLabels(yaw,pitch,lastProgress);return;
+      ctx.globalAlpha=1;drawGymFallback(ctx,gymGeometry,p=>project(p,yaw,pitch),focus?.id,gymTime,gymState);updateLabels(yaw,pitch,lastProgress);return;
     }
     for(const b of bodies){const v=project(b.position,yaw,pitch),r=Math.max(2,b.radius*v.scale);if(v.depth<=0)continue;
       const g=ctx.createRadialGradient(v.x-r*.28,v.y-r*.2,r*.1,v.x,v.y,r);g.addColorStop(0,`rgb(${b.color.map(c=>Math.round(c*255)).join(',')})`);g.addColorStop(1,'#070b14');ctx.fillStyle=g;ctx.beginPath();ctx.arc(v.x,v.y,r,0,TAU);ctx.fill();
@@ -794,6 +807,6 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   if(gl)init();else canvas.dataset.renderer='canvas';
   // Procedural surfaces stay sharp at every zoom without texture downloads.
   canvas.dataset.focus='system';canvas.dataset.world=world;
-  return {render,camera,size,select,clearFocus,zoom,setWorld,pick,probe,hover,clearHover,activate,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
+  return {render,camera,size,select,clearFocus,zoom,setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
 }
 
