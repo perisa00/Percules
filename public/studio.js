@@ -15,7 +15,6 @@ function menuOpen(open,restore=false){
   else if(restore)toggle.focus({preventScroll:true});
 }
 function close(restore=false){
-  byId('milica-promo').pause();
   panel.hidden=true;document.body.dataset.detail='closed';current=null;readingOffline=false;
   if(restore){const target=origin?.isConnected&&!origin.closest('[hidden]')?origin:byId('galaxy');target.focus({preventScroll:true});}
 }
@@ -23,7 +22,7 @@ function show(id,world,focus=true,body=null){
   const key=world==='milica'?'milica':id;
   const article=articles.find(a=>a.dataset.content===key);if(!article)return;
   const selection=world+':'+(body?.id||key);if(current===selection&&!panel.hidden)return;
-  byId('milica-promo').pause();current=selection;hidePreview();
+  current=selection;hidePreview();
   const context=byId('object-context');context.hidden=!body||(body.id==='sun'&&world!=='milica')||body.id===key||(world==='milica'&&body.id==='earth');
   if(!context.hidden){byId('object-context-title').textContent=body.headline;byId('object-context-description').textContent=body.text;}articles.forEach(a=>a.hidden=a!==article);panel.hidden=false;
   document.body.dataset.detail='open';panel.setAttribute('aria-labelledby',article.id+'-title');
@@ -76,8 +75,7 @@ document.addEventListener('percules:close',()=>{hidePreview();close();menuOpen(f
 function readRequested(){const world=requested?.world||byId('galaxy').dataset.zoomTarget||'studio';readingOffline=true;show(destinations[world]?.body||'milica',world);}
 document.addEventListener('percules:unavailable',readRequested);
 byId('loading-content').addEventListener('click',readRequested);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)byId('milica-promo').pause();});
-for(const id of ['milica-phone','project-story'])byId(id).addEventListener('click',()=>{origin=byId(id);show('milica','milica');});
+byId('project-story').addEventListener('click',()=>{origin=byId('project-story');show('milica','milica');});
 document.addEventListener('pointerdown',event=>{if(!menu.hidden&&!event.target.closest('#studio-menu, #menu-toggle'))menuOpen(false);});
 document.addEventListener('keydown',event=>{
   if(event.key!=='Escape')return;
