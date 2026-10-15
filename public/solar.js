@@ -1,5 +1,5 @@
-import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=3';
-import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=1';
+import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=4';
+import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=2';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a+(b-a)*t;

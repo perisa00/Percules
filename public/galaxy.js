@@ -205,7 +205,7 @@
   function ensureSolar(){
     if(solar||solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=milica-gym-3').then(async module=>{
+    solarLoading=import('./solar.js?v=milica-gym-4').then(async module=>{
       try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
       catch(e){console.warn('Arrival shield unavailable:',e);}
       try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}

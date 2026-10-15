@@ -1,4 +1,4 @@
-import {workoutFrame,workoutTransform,transformGymPoint} from './gym-workout.js?v=1';
+import {workoutFrame,workoutTransform,transformGymPoint} from './gym-workout.js?v=2';
 // Static buffers plus joint transforms, shared by WebGL and Canvas.
 export function createGymGeometry() {
   const meshes = new Map();
@@ -84,9 +84,11 @@ export function createGymGeometry() {
   for(const x of [-1.65,1.65])tube([x-.025,0,0],[x+.025,0,0],.26,blush,0,20);
   group='sun';
   // Upholstered bench in front of the rack.
-  box(-3.4,.72,-1.9,.85,.23,2.25,rose);
-  box(-3.4,.86,-1.9,.81,.07,2.15,blush);
-  for(const z of [-2.65,-1.15]){box(-3.4,.36,z,.13,.68,.17,pale);box(-3.4,.08,z,1.3,.12,.35,rose);}
+  group='bench';motions.set(group,{zone:'sun'});
+  box(-3.4,.72,-2.2,.85,.23,1.6,rose);
+  box(-3.4,.86,-2.2,.81,.07,1.5,blush);
+  for(const z of [-2.75,-1.65]){box(-3.4,.36,z,.13,.68,.17,pale);box(-3.4,.08,z,1.3,.12,.35,rose);}
+  group='sun';
   // Two-tier dumbbell shelf and a loose pair.
   for(const z of [.25,2.7])box(-4.9,.65,z,.16,1.3,.16,rose);
   for(const y of [.55,1.15]) {

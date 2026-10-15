@@ -29,7 +29,7 @@ vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,wor
 const {createSolar,worlds}=context.api;
 assert.equal(Object.keys(worlds).length,7);assert.equal(worlds.milica.length,4);
 const gymMeshes=vm.runInContext('createGymGeometry()',context);
-assert.deepEqual(Array.from(gymMeshes.filter(mesh=>!mesh.motion),mesh=>mesh.id).sort(),['cardio','earth','room','stretch','sun']);
+assert.deepEqual(Array.from(gymMeshes.filter(mesh=>!mesh.motion),mesh=>mesh.id).sort(),['bench','cardio','earth','room','stretch','sun']);
 assert.equal(gymMeshes.filter(mesh=>mesh.motion==='belt').length,24,'Both treadmill belts need moving treads');
 assert.ok(gymMeshes.some(mesh=>mesh.part==='handL')&&gymMeshes.some(mesh=>mesh.part==='handR'),'The trainer needs articulated hands for each station');
 for(const mesh of gymMeshes){
@@ -130,7 +130,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=milica-gym-3')","Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=milica-gym-4')","Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');

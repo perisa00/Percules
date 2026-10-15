@@ -62,8 +62,9 @@ function exercise(station,t){
     for(let i=0;i<2;i++){const s=i?1:-1,q=(1-Math.cos(t*2.1+i*.25))/2;p.hands[i]=add(entry,[s*.44,1.01+q*.72,.04+Math.sin(q*PI)*.39]);p.elbows[i]=[s*.15,-1,-.25];}
     p.root[1]+=.012*Math.sin(t*2.1);p.lean=-.025*Math.sin(t*2.1);
   }else if(id==='bench'){
-    p.root=[-3.4,1.10,-1.45];p.lean=-PI/2;
-    p.feet=[[-3.88,.14,-.55],[-2.92,.14,-.55]];p.knees=[[-.2,1,1],[.2,1,1]];
+    // Hips rest at the foot end; planted ankles remain within the leg's reach.
+    p.root=[-3.4,1.10,-1.38];p.lean=-PI/2;
+    p.feet=[[-3.88,.14,-.93],[-2.92,.14,-.93]];p.knees=[[-.45,1,1],[.45,1,1]];
     p.hands=[[-4.02,1.45+wave*.66,-2.13],[-2.78,1.45+wave*.66,-2.13]];p.elbows=[[-1,0,.2],[1,0,.2]];
   }else if(id==='squat'||id==='kettle'){
     p.root[1]-=wave*.48;p.root[2]-=wave*.22;p.lean=wave*.33;
