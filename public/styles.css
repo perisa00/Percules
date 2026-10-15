@@ -197,8 +197,9 @@ body[data-scene="system"] .view-controls .reset-button{display:none}
 #galaxy-destinations{inset:104px 28px auto;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;column-gap:22px;row-gap:0;pointer-events:none;z-index:4}
 #galaxy-destinations[hidden]{display:none}
 #galaxy-destinations .galaxy-destination{position:relative;left:auto;top:auto;transform:none;width:auto;flex:0 0 auto;min-height:44px;justify-content:center;padding:0 6px;gap:8px;color:var(--destination-color);letter-spacing:.7px}
-#galaxy-destinations .galaxy-destination:hover,#galaxy-destinations .galaxy-destination[data-highlighted="true"]{color:var(--destination-color);text-shadow:0 0 14px var(--destination-color)}
-#galaxy-destinations .galaxy-destination[data-highlighted="true"] .marker-dot{box-shadow:0 0 12px var(--destination-color)}
+#galaxy-destinations .galaxy-destination:hover,#galaxy-destinations .galaxy-destination:focus-visible,#galaxy-destinations .galaxy-destination[data-highlighted="true"]{color:#f6f3ff;text-shadow:0 0 3px #ffffff80,0 0 10px var(--destination-color),0 0 24px var(--destination-color)}
+#galaxy-destinations .galaxy-destination .marker-dot{transition:background-color .18s,box-shadow .18s}
+#galaxy-destinations .galaxy-destination:hover .marker-dot,#galaxy-destinations .galaxy-destination:focus-visible .marker-dot,#galaxy-destinations .galaxy-destination[data-highlighted="true"] .marker-dot{background:#fff;box-shadow:0 0 5px var(--destination-color),0 0 14px var(--destination-color),0 0 24px var(--destination-color)}
 body[data-flight="active"] #galaxy-destinations,body[data-flight="aligning"] #galaxy-destinations{opacity:0;pointer-events:none}
 body[data-flight="active"] #galaxy-destinations button,body[data-flight="aligning"] #galaxy-destinations button{pointer-events:none}
 @media(max-width:800px){#galaxy-destinations{inset:110px 18px auto;column-gap:12px}#galaxy-destinations .galaxy-destination{font-size:10px;letter-spacing:.4px;padding:0 3px;gap:6px}}

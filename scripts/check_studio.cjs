@@ -161,6 +161,18 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
+  if(!coarse){
+    const processPoint=context.galaxyPoints().find(p=>p.id==='process');
+    gesture('pointermove',300,processPoint.x,processPoint.y);
+    assert.equal(node('destination-process').dataset.highlighted,'true','Hovering the process star must light the full Način rada title');
+    assert.equal(node('star-process').dataset.active,'true');
+    assert.equal(websiteLabel.dataset.highlighted,'false','Another title must not stay lit');
+    gesture('pointermove',300,0,0);
+    assert.equal(node('destination-process').dataset.highlighted,'false','Leaving the star must restore the title');
+    node('destination-process').listeners.pointerenter();
+    assert.equal(node('star-process').dataset.active,'true','Hovering the title must light the same process star');
+    node('destination-process').listeners.pointerleave();
+  }
   // Select the actual projected lights after moving and rotating the camera.
   key('ArrowRight');key('ArrowUp');key('ArrowRight',true);tick(80);
   let beacon=context.galaxyPoints().find(p=>p.id==='websites');
