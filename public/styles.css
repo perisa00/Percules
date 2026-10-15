@@ -43,9 +43,8 @@ body[data-flight="aligning"] .sun-marker .marker-dot{box-shadow:0 0 0 12px #9bc9
 .menu-toggle[aria-expanded="true"] .menu-lines{transform:rotate(-20deg)}
 .studio-emblem{position:absolute;left:0;top:0;z-index:2;background:none;filter:drop-shadow(0 0 18px #60b7e033)}
 .world-haze{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at 70% 30%,#ad2a7421,transparent 56%),radial-gradient(ellipse at 20% 75%,#7f236b18,transparent 60%);transition:opacity .65s}
-body[data-world="milica"] .world-haze{opacity:1}
-body[data-world="milica"]{--accent:#ffd0e5;--line:#e5a9cc30}
-body[data-world="milica"] .live-dot{background:#ffe0ef;box-shadow:0 0 12px #ff94c3}
+body[data-theme="pink"] .world-haze{opacity:1}
+body[data-theme="pink"] .live-dot{background:#ffe0ef;box-shadow:0 0 12px #ff94c3}
 .studio-menu{position:absolute;z-index:10;right:42px;top:106px;width:360px;padding:25px 28px 20px;max-height:calc(100% - 140px);overflow-y:auto;overscroll-behavior:none;touch-action:pan-y;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,#131c2af7,#070d17fa);box-shadow:0 28px 100px #000a;backdrop-filter:blur(24px)}
 .studio-menu .eyebrow{margin-bottom:20px;font-size:8px;color:#97a9c4}
 .studio-menu nav{display:flex;flex-direction:column}
@@ -204,3 +203,26 @@ body[data-flight="active"] #galaxy-destinations button,body[data-flight="alignin
 @media(max-width:800px){#galaxy-destinations{inset:110px 18px auto;column-gap:12px}#galaxy-destinations .galaxy-destination{font-size:10px;letter-spacing:.4px;padding:0 3px;gap:6px}}
 @media(max-width:380px){#galaxy-destinations{column-gap:10px}#galaxy-destinations .galaxy-destination{font-size:9px;letter-spacing:.25px}}
 @media(max-height:550px){#galaxy-destinations{top:90px;column-gap:16px}}
+
+/* Milica's gym has a complete rose palette, including overlays and navigation. */
+body[data-theme="pink"]{--accent:#ffb9da;--line:#f58cb552;--muted:#e6adc7;background:#210615;color:#ffe0ed}
+body[data-theme="pink"] .world-haze{opacity:.45;background:radial-gradient(ellipse at 65% 25%,#e62d7e30,transparent 58%)}
+body[data-theme="pink"] .vignette{background:linear-gradient(180deg,#25081577,transparent 24%,transparent 68%,#25081599)}
+body[data-theme="pink"] .brand-coin{filter:sepia(1) saturate(2.6) hue-rotate(285deg) drop-shadow(0 0 10px #ff68ac40)}
+body[data-theme="pink"] :is(.brand small,.location,.location-index,.eyebrow,#scene-description,.bottom-bar,.coordinate,.text-button){color:#eab1cc}
+body[data-theme="pink"] :is(.icon-button,.menu-toggle,.planet-label,#planet-nav){color:#ffd1e5;border-color:var(--line);background:#41132cc9}
+body[data-theme="pink"] :is(.icon-button,.menu-toggle,.planet-label):hover{background:#702343;border-color:#ffacd0}
+body[data-theme="pink"] :is(.detail-panel,.studio-menu,.about-panel,.object-preview){background:linear-gradient(145deg,#4a1734f5,#260a1cf7);border-color:var(--line);box-shadow:0 25px 90px #21061580}
+body[data-theme="pink"] :is(.detail-panel .lead,.about-panel a,.object-preview>p:not(.eyebrow),.menu-foot a,.menu-foot button,.studio-menu nav button>span,.studio-menu nav button>b,.detail-top .eyebrow,.fine-print){color:#f2bdd6}
+body[data-theme="pink"] :is(.about-panel p,.about-panel .keyboard-help,.studio-menu .eyebrow){color:var(--muted)}
+body[data-theme="pink"] #planet-nav button{color:#f5b7d3}
+body[data-theme="pink"] #planet-nav button:is(:hover,[aria-pressed="true"]){color:#ffe2ee;background:#a0346555}
+body[data-theme="pink"] .menu-lines{border-color:#ffc5df}
+body[data-theme="pink"] :is(button,a):focus-visible{outline-color:#ffb9da}
+body[data-theme="pink"] #galaxy:focus-visible{box-shadow:inset 0 0 0 1px #ff8cbe77}
+body[data-theme="pink"] .control-divider{background:#f4a0c577}
+body[data-theme="pink"] .scene-caption h1{color:#ffd0e5;text-shadow:0 0 28px #ff5da03d}
+body[data-theme="pink"] .journey-button{border-color:#f5a2ca77}
+body[data-theme="pink"] .journey-button:hover,body[data-theme="pink"] .panel-cta:hover{color:#ffe1ee}
+body[data-theme="pink"] .detail-scroll{scrollbar-color:#d9659c66 transparent}
+@media(max-width:800px){body[data-theme="pink"][data-scene="system"] .scene-caption{max-width:calc(100% - 95px)}body[data-theme="pink"] #planet-nav button{padding:9px 12px;font-size:11px}}

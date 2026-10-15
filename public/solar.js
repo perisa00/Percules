@@ -1,3 +1,4 @@
+import {createGymGeometry, drawGymFallback} from './space-gym.js?v=1';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a+(b-a)*t;
@@ -494,7 +495,7 @@ export const worlds={
       "style": 7,
       "destination": "milica",
       "headline": "Uđi u Miličin roze svemir.",
-      "text": "Roze sunce i roze-bela planeta posvećeni projektu na kojem smo radili ceo proces."
+      "text": "Roze teretana koja lebdi u svemiru — tegovi, kardio i istezanje među zvezdama."
     }
   ],
   "contact": [
@@ -588,58 +589,13 @@ export const worlds={
     }
   ],
   "milica": [
-    {
-      "id": "sun",
-      "name": "Miličino sunce",
-      "kind": "Svet jednog projekta",
-      "radius": 2,
-      "orbit": 0,
-      "angle": 0,
-      "color": [
-        1,
-        0.32,
-        0.62
-      ],
-      "style": 0,
-      "text": "Roze svet, posvećen jednom iskustvu.",
-      "position": [
-        0,
-        0,
-        0
-      ],
-      "content": "milica",
-      "headline": "Miličin roze svet"
-    },
-    {
-      "id": "earth",
-      "name": "Miličina aplikacija",
-      "kind": "Projekat · lični trener",
-      "radius": 1.75,
-      "orbit": 9,
-      "angle": 0.42,
-      "color": [
-        1,
-        0.67,
-        0.81
-      ],
-      "atmosphere": [
-        1,
-        0.41,
-        0.7
-      ],
-      "style": 7,
-      "text": "Jedna ideja, puna posvećenost — od prvog razgovora do detalja.",
-      "position": [
-        8.217800462810775,
-        0,
-        3.669844077536131
-      ],
-      "content": "milica",
-      "headline": "Jedan svet. Puna posvećenost."
-    }
+  {id:'sun',name:'Zona snage',kind:'Roze teretana · tegovi',radius:2,position:[-3.6,1,-1.4],color:[1,.35,.65],content:'milica',headline:'Snaga u roze.',text:'Tegovi, klupa i stalak za vežbanje na platformi među zvezdama.'},
+  {id:'earth',name:'Miličina aplikacija',kind:'Projekat · lični trener',radius:1.3,position:[0,2.65,-4.1],color:[1,.65,.8],content:'milica',headline:'Miličin svet. Tvoj ritam.',text:'Upoznaj projekat i otvori Miličinu aplikaciju za lični trening.'},
+  {id:'cardio',name:'Kardio zona',kind:'Roze teretana · pokret',radius:1.8,position:[3.15,.9,-.8],color:[1,.45,.7],content:'milica',headline:'Pokret među zvezdama.',text:'Roze trake za trčanje, neonsko svetlo i pogled na svemir.'},
+  {id:'stretch',name:'Zona istezanja',kind:'Roze teretana · ravnoteža',radius:1.7,position:[.2,.1,2.6],color:[1,.65,.8],content:'milica',headline:'Prostor za tvoj ritam.',text:'Roze strunjače i oprema za istezanje na otvorenoj svemirskoj platformi.'}
   ]
 };
-Object.values(worlds).flat().forEach(b=>b.position=[Math.cos(b.angle)*b.orbit,0,Math.sin(b.angle)*b.orbit]);
+Object.entries(worlds).forEach(([id,list])=>{if(id!=='milica')list.forEach(b=>b.position=[Math.cos(b.angle)*b.orbit,0,Math.sin(b.angle)*b.orbit]);});
 export const bodies=worlds.studio;
 
 export function createSolar(canvas, options={}) {
@@ -647,6 +603,7 @@ export function createSolar(canvas, options={}) {
   let width=1,height=1,dpr=1,time=0,distance=180,focus=null,focusZoom=1,center=[0,0,0],lost=false,framing=0,focusMix=0,roll=0,viewInitialized=false;
   let world='studio',bodies=worlds.studio,overviewZoom=1,hovered=null,hoverPoint=null,forcedHover=null,lastYaw=0,lastPitch=0,lastProgress=0,previewedTouchId=null;
   let resources,images=new Map(),highRequested=new Set(),earthExtras=false;
+  const gymGeometry=createGymGeometry();
   const labelRoot=document.getElementById('planet-labels');
   const labelButtons=new Map();
   function labels(){
@@ -770,8 +727,12 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       `precision mediump float;uniform float uAlpha;void main(){gl_FragColor=vec4(.40,.50,.66,uAlpha);}`);
     const corona=program(`attribute vec2 aPosition;uniform vec2 uCenter;uniform vec2 uSize;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(uCenter+aPosition*uSize,0.,1.);}`,
       `precision highp float;varying vec2 vUv;uniform float uTime,uOpacity;uniform vec3 uTint;void main(){float r=length(vUv),a=r>.0001?atan(vUv.y,vUv.x):0.;float ray=.72+.18*sin(a*17.+sin(a*7.+uTime*.12)*1.8)+.1*sin(a*31.-uTime*.15);float outer=exp(-r*5.5)*ray;float rim=exp(-abs(r-.285)*24.)*.21;float alpha=(outer*.45+rim)*(1.-smoothstep(.75,1.,r));gl_FragColor=vec4(uTint*alpha*uOpacity,alpha*uOpacity);}`);
+    const gym=program(`precision highp float;attribute vec3 aPosition,aNormal,aColor;attribute float aGlow;varying vec3 vColor,vNormal,vWorld;varying float vGlow;${view}void main(){vColor=aColor;vNormal=aNormal;vWorld=aPosition;vGlow=aGlow;gl_Position=project(aPosition);}`,
+      `precision highp float;varying vec3 vColor,vNormal,vWorld;varying float vGlow;uniform vec3 uEye;uniform float uOpacity;void main(){vec3 n=normalize(vNormal),l=normalize(vec3(-3.,8.,5.)-vWorld),e=normalize(uEye-vWorld);float diffuse=max(dot(n,l),0.);float spec=pow(max(dot(n,normalize(l+e)),0.),36.);vec3 color=vColor*(.48+diffuse*.5)+vec3(1.,.49,.72)*spec*.25;color=mix(color,vColor*1.12,vGlow);gl_FragColor=vec4(color,uOpacity);}`);
     const backdrop=program(`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(aPosition,.999,1.);}`,
       `precision highp float;varying vec2 vUv;uniform vec2 uResolution;uniform float uYaw,uPitch;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 p=(vUv+1.)*.5*uResolution+vec2(uYaw*16.,uPitch*12.);vec2 cell=floor(p/28.),uv=fract(p/28.);float h=hash(cell),s=0.;if(h>.71){vec2 pos=vec2(hash(cell+3.7),hash(cell+8.1));float d=length((uv-pos)*28.);s=exp(-d*d*1.9)*(.2+h*.35);}float haze=exp(-pow((vUv.y+vUv.x*.32)*3.2,2.))*.009;gl_FragColor=vec4(vec3(.001,.002,.006)+vec3(.53,.66,.91)*s+vec3(.15,.23,.48)*haze,1.);}`);
+    const pinkSky=program(`attribute vec2 aPosition;varying vec2 vUv;void main(){vUv=aPosition;gl_Position=vec4(aPosition,.999,1.);}`,
+      `precision highp float;varying vec2 vUv;uniform vec2 uResolution;uniform float uYaw,uPitch,uOpacity;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 q=vUv;float cloud=exp(-pow((q.y-q.x*.35+.12)*2.,2.))*(.5+.5*sin(q.x*3.+q.y*2.));vec3 color=mix(vec3(.045,.004,.024),vec3(.22,.025,.10),cloud);vec2 p=(q+1.)*.5*uResolution+vec2(uYaw*80.,uPitch*55.);vec2 cell=floor(p/38.),uv=fract(p/38.);float h=hash(cell);vec2 pos=vec2(hash(cell+3.7),hash(cell+8.1));float d=length((uv-pos)*38.);float star=exp(-d*d*1.3)*step(.48,h)*(.3+h);color+=vec3(1.,.57,.76)*star;vec2 moon=(q-vec2(.64,.48))*vec2(uResolution.x/uResolution.y,1.);float r=length(moon);color=mix(color,vec3(.65,.16,.36)*(.45+.55*max(0.,1.-r/.13)),1.-smoothstep(.127,.13,r));color+=vec3(.7,.09,.30)*exp(-abs(r-.13)*60.)*.2;gl_FragColor=vec4(color,uOpacity);}`);
     const sphere=[],indices=[],lat=64,lon=96;
     for(let y=0;y<=lat;y++)for(let x=0;x<=lon;x++){const a=x/lon*TAU,b=y/lat*Math.PI;sphere.push(Math.sin(b)*Math.cos(a),Math.cos(b),Math.sin(b)*Math.sin(a),x/lon,1-y/lat);}
     for(let y=0;y<lat;y++)for(let x=0;x<lon;x++){const a=y*(lon+1)+x,b=a+lon+1;indices.push(a,a+1,b,a+1,b+1,b);}
@@ -779,26 +740,28 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const sphereBuffer=buffer(new Float32Array(sphere)),indexBuffer=buffer(new Uint16Array(indices),gl.ELEMENT_ARRAY_BUFFER);
     const ringMesh=[];for(let i=0;i<160;i++){const a=i/160*TAU,b=(i+1)/160*TAU;for(const [t,r] of [[a,1.24],[b,1.24],[a,2.48],[a,2.48],[b,1.24],[b,2.48]])ringMesh.push(Math.cos(t)*r,0,Math.sin(t)*r);}
     const ringBuffer=buffer(new Float32Array(ringMesh)),quad=buffer(new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]));
-    const orbitBuffers=new Map(Object.entries(worlds).map(([id,list])=>[id,list.slice(1).map(b=>{const pts=[];for(let i=0;i<=192;i++){const a=i/192*TAU;pts.push(Math.cos(a)*b.orbit,0,Math.sin(a)*b.orbit);}return buffer(new Float32Array(pts));})]));
+    const orbitBuffers=new Map(Object.entries(worlds).map(([id,list])=>[id,id==='milica'?[]:list.slice(1).map(b=>{const pts=[];for(let i=0;i<=192;i++){const a=i/192*TAU;pts.push(Math.cos(a)*b.orbit,0,Math.sin(a)*b.orbit);}return buffer(new Float32Array(pts));})]));
+    const gymBuffers=gymGeometry.map(mesh=>({id:mesh.id,buffer:buffer(mesh.data),count:mesh.data.length/10}));
     const textures=new Map();
     for(const id of [...new Set(Object.values(worlds).flat().map(b=>b.id)),'earth-night','earth-clouds']){
       const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);textures.set(id,{texture,high:false,ready:false});
     }
-    const programs={surface,atmosphere,ring,orbit,corona,backdrop},locations=new Map();
+    const programs={surface,atmosphere,ring,orbit,corona,backdrop,gym,pinkSky},locations=new Map();
     for(const p of Object.values(programs)){
       const u={};for(const name of ['uLight','uStyle','uRoll','uOpacity','uTarget','uYaw','uPitch','uDistance','uAspect','uFraming','uCenter','uRadius','uSpin','uTilt','uEye','uTint','uSun','uEarth','uSaturn','uTime','uMap','uNight','uClouds','uHasMap','uHasNight','uHasClouds','uSize','uAlpha','uResolution'])u[name]=gl.getUniformLocation(p,name);
-      u.position=gl.getAttribLocation(p,'aPosition');u.uv=gl.getAttribLocation(p,'aUv');locations.set(p,u);
+      u.position=gl.getAttribLocation(p,'aPosition');u.uv=gl.getAttribLocation(p,'aUv');u.normal=gl.getAttribLocation(p,'aNormal');u.color=gl.getAttribLocation(p,'aColor');u.glow=gl.getAttribLocation(p,'aGlow');locations.set(p,u);
     }
-    resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers};
+    resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers,gymBuffers};
     for(const [key,image] of images)if(image.complete&&image.naturalWidth)upload(key.replace('-low',''),image,!key.endsWith('-low'));
     canvas.dataset.renderer='webgl';
   }
   function size(w,h,pixelRatio){width=w;height=h;dpr=Math.min(pixelRatio,1.6);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);if(gl)gl.viewport(0,0,canvas.width,canvas.height);}
   const enabled=new Set();
-  function attributes(position,uv=-1){
-    for(const index of enabled)if(index!==position&&index!==uv){gl.disableVertexAttribArray(index);enabled.delete(index);}
+  function attributes(position,uv=-1,...extra){
+    for(const index of enabled)if(index!==position&&index!==uv&&!extra.includes(index)){gl.disableVertexAttribArray(index);enabled.delete(index);}
     gl.enableVertexAttribArray(position);enabled.add(position);
+    for(const index of extra)if(index>=0){gl.enableVertexAttribArray(index);enabled.add(index);}
     if(uv>=0){gl.enableVertexAttribArray(uv);enabled.add(uv);gl.vertexAttribPointer(position,3,gl.FLOAT,false,20,0);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);}
   }
   function camera(state){
@@ -824,6 +787,21 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
     let u;
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+    if(world==='milica'){
+      const fade=clamp((progress-.75)/.25,0,1);
+      if(fade>0){u=use(p.pinkSky);gl.uniform1f(u.uOpacity,fade);gl.uniform2f(u.uResolution,width,height);gl.bindBuffer(gl.ARRAY_BUFFER,resources.quad);attributes(u.position);gl.vertexAttribPointer(u.position,2,gl.FLOAT,false,0,0);gl.drawArrays(gl.TRIANGLES,0,6);}
+      gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);
+      u=use(p.gym);
+      for(const mesh of resources.gymBuffers){
+        // Keep the architecture visible while a selected station is explored.
+        gl.uniform1f(u.uOpacity,focus&&mesh.id!==focus.id?1-focusMix*.65:1);
+        gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);attributes(u.position,-1,u.normal,u.color,u.glow);
+        gl.vertexAttribPointer(u.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(u.normal,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(u.color,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(u.glow,1,gl.FLOAT,false,40,36);
+        gl.drawArrays(gl.TRIANGLES,0,mesh.count);
+      }
+      const emblem=document.getElementById('studio-emblem');if(emblem)emblem.hidden=true;
+      updateLabels(yaw,pitch,progress);publishHover();return;
+    }
     u=use(p.orbit);gl.uniform1f(u.uAlpha,.16*(1-focusMix));
     for(const b of resources.orbitBuffers.get(world)){gl.bindBuffer(gl.ARRAY_BUFFER,b);attributes(u.position);gl.vertexAttribPointer(u.position,3,gl.FLOAT,false,0,0);gl.drawArrays(gl.LINE_STRIP,0,193);}
     const sun=project([0,0,0],yaw,pitch),coronaRadius=Math.max(2,2*sun.scale*3.5);
@@ -861,6 +839,12 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   }
   function renderFallback(yaw,pitch){
     const ctx=canvas.getContext('2d');if(!ctx)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    if(world==='milica'){
+      if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
+      const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';
+      for(let i=0;i<110;i++){const x=((i*137.51+yaw*12)%width+width)%width,y=((i*i*37.71+pitch*12)%height+height)%height;ctx.fillRect(x,y,i%7===0?2:1,i%7===0?2:1);}
+      ctx.globalAlpha=1;drawGymFallback(ctx,gymGeometry,p=>project(p,yaw,pitch),focus?.id);updateLabels(yaw,pitch,lastProgress);return;
+    }
     for(const b of bodies){const v=project(b.position,yaw,pitch),r=Math.max(2,b.radius*v.scale);if(v.depth<=0)continue;
       const g=ctx.createRadialGradient(v.x-r*.28,v.y-r*.2,r*.1,v.x,v.y,r);g.addColorStop(0,`rgb(${b.color.map(c=>Math.round(c*255)).join(',')})`);g.addColorStop(1,'#070b14');ctx.fillStyle=g;ctx.beginPath();ctx.arc(v.x,v.y,r,0,TAU);ctx.fill();
     }updateLabels(yaw,pitch,1);

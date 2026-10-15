@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const source=fs.readFileSync('public/solar.js','utf8');
+const source=fs.readFileSync('public/space-gym.js','utf8')+'\n'+fs.readFileSync('public/solar.js','utf8').replace(/^import .*;\r?\n/m,'');
 const shaderPairs=[],draws=[],uploads=[],viewUniforms=new Map();
 let currentSources=[],id=0;
 const gl=new Proxy({
@@ -14,7 +14,7 @@ getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
 getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:(p,name)=>({name}),uniform3fv:(u,v)=>viewUniforms.set(u.name,Array.from(v)),uniform1f:(u,v)=>viewUniforms.set(u.name,v),
-bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),
+bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),drawArrays:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
 function element(){return {dataset:{},style:{},children:[],listeners:{},hidden:false,
 setAttribute(){},addEventListener(type,fn){this.listeners[type]=fn;},replaceChildren(){this.children=[];},
@@ -26,9 +26,19 @@ Image:function(){throw Error('Procedural studio must not download planetary imag
 vm.createContext(context);
 vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,worlds,bodies};',context);
 const {createSolar,worlds}=context.api;
-assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,2);
+assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,4);
+const gymMeshes=vm.runInContext('createGymGeometry()',context);
+assert.deepEqual(Array.from(gymMeshes,mesh=>mesh.id).sort(),['cardio','earth','room','stretch','sun']);
+for(const mesh of gymMeshes){
+  assert.equal(mesh.data.length%30,0,'Gym buffers must contain complete triangles');
+  assert.ok(mesh.data.every(Number.isFinite),'Gym vertices must be finite');
+  for(let i=0;i<mesh.data.length;i+=10){
+    assert.ok(Math.abs(Math.hypot(...mesh.data.slice(i+3,i+6))-1)<.001,'Lighting requires unit normals');
+    assert.ok(mesh.data[i+6]>mesh.data[i+8]&&mesh.data[i+8]>mesh.data[i+7],'Every gym material must stay pink');
+  }
+}
 for(const [id,list] of Object.entries(worlds)){
-assert.equal(list.length,id==='milica'?2:id==='projects'?3:4,'Each main destination must have its own world');
+assert.equal(list.length,id==='projects'?3:4,'Each main destination must have its own world');
 assert.equal(new Set(list.map(b=>b.id)).size,list.length);
 for(const b of list){assert.ok(b.position.every(Number.isFinite));assert.ok(b.radius>0);}
 }
@@ -49,7 +59,7 @@ assert.ok(Math.abs(camera.framing-.4)<.001);
 solar.render({dt:1/60,yaw:.25,pitch:.73,roll:-.2,progress:1,reducedMotion:false,viewPrepared:true});
 assert.ok(draws.length>0);assert.equal(solar.setWorld('invalid'),false);
 solar.setWorld('studio');assert.equal(solar.setWorld('milica'),true);assert.equal(solar.isFocused(),false);
-assert.equal(labels.children.length,2);assert.equal(canvas.dataset.world,'milica');
+assert.equal(labels.children.length,4);assert.equal(canvas.dataset.world,'milica');
 solar.camera({dt:1/60,target:[0,0,0],distance:80,reducedMotion:true});
 solar.render({dt:1/60,yaw:.25,pitch:.73,progress:1,reducedMotion:true,viewPrepared:true});
 assert.equal(emblem.hidden,true);
@@ -108,7 +118,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=11')","Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=milica-gym-1')","Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')","Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=17')","Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
@@ -216,11 +226,11 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false){
   document.dispatchEvent({type:'percules:unfocus'});tick(50);assert.equal(body.dataset.scene,'system');assert.equal(body.dataset.world,'contact');
 
   navigate('milica',null);if(!reduced){tick(10);assert.equal(node('solar').dataset.world,'contact');}
-  tick(reduced?3:65);assert.equal(body.dataset.world,'milica');assert.equal(body.dataset.scene,'system');
+  tick(reduced?3:65);assert.equal(body.dataset.world,'milica');assert.equal(body.dataset.scene,'system');assert.equal(body.dataset.theme,'pink');
   document.dispatchEvent({type:'percules:object',detail:{id:'earth'}});tick(4);assert.equal(node('scene-title').textContent,'Miličina aplikacija');
   navigate('projects','jupiter');tick(reduced?3:70);assert.equal(body.dataset.world,'projects');assert.equal(body.dataset.scene,'system');
   document.dispatchEvent({type:'percules:object',detail:{id:'milica-portal'}});tick(reduced?3:70);assert.equal(body.dataset.world,'milica');assert.equal(body.dataset.scene,'system');
-  node('brand-home').listeners.click();tick(reduced?3:70);assert.equal(body.dataset.scene,'galaxy');
+  node('brand-home').listeners.click();tick(reduced?3:70);assert.equal(body.dataset.scene,'galaxy');assert.equal(body.dataset.theme,'space');
   assert.ok(sceneEvents.some(event=>event.world==='milica'));
   if(reduced)assert.ok(shieldFrames.every(age=>age<0),'Reduced motion should skip shield');
   else assert.ok(shieldFrames.some(age=>age>=0),'Shared shield must run on the jump');

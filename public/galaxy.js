@@ -154,13 +154,15 @@
     const key=scene+(focusedBody?.id||'')+world+(flight||worldFlight?'teleport':'');if(uiScene===key)return;uiScene=key;
     document.body.dataset.scene=scene;document.body.dataset.world=world;
     const planet=scene==='planet',system=scene==='system',galaxy=scene==='galaxy';
+    document.body.dataset.theme=pink&&!galaxy?'pink':'space';
     sound({type:'scene',local:system||planet});
     el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?destinations[world].name.toLocaleUpperCase('sr-Latn'):galaxy?'MLEČNI PUT':'PUTOVANJE';
     el('location-index').textContent=galaxy?'01 / 03':planet?'03 / 03':'02 / 03';
-    el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'PROJEKAT · MILICA':'IZABERI SVOJ SLEDEĆI KORAK'):'PERCULES DIGITAL STUDIO';
-    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Miličin svet.':world==='studio'?'Percules.':destinations[world].name):'Svaki detalj je važan.';
-    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Roze sunce. Jedan svet. Puna posvećenost.':coarse?'Dodirni objekat da upoznaš njegovu priču.':'Pređi mišem preko objekta da upoznaš njegovu priču.'):'Pravimo sajtove i aplikacije kojima se posvećujemo od prvog razgovora.';
+    el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'MILICA · TERETANA U SVEMIRU':'IZABERI SVOJ SLEDEĆI KORAK'):'PERCULES DIGITAL STUDIO';
+    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Tvoj roze svemir.':world==='studio'?'Percules.':destinations[world].name):'Svaki detalj je važan.';
+    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Tegovi, pokret i tvoj ritam. Među zvezdama.':coarse?'Dodirni objekat da upoznaš njegovu priču.':'Pređi mišem preko objekta da upoznaš njegovu priču.'):'Pravimo sajtove i aplikacije kojima se posvećujemo od prvog razgovora.';
     el('enter-solar').hidden=!galaxy;el('back-system').hidden=!planet;el('back-galaxy').hidden=galaxy||scene==='travel';
+    el('back-system').textContent=pink?'← Cela teretana':'← Ceo sistem';
     el('back-studio').hidden=true;
     planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
     el('planet-labels').hidden=!system;
@@ -196,7 +198,7 @@
   function ensureSolar(){
     if(solar||solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=11').then(async module=>{
+    solarLoading=import('./solar.js?v=milica-gym-1').then(async module=>{
       try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
       catch(e){console.warn('Arrival shield unavailable:',e);}
       try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}
@@ -778,7 +780,7 @@
     solarAnchor=flowPoint(solarPoint);
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
-    const systemFit=solar?.worldId()==='milica'?Math.max(34,36/(width/height)):Math.max(44,46/(width/height));
+    const systemFit=solar?.worldId()==='milica'?Math.max(24,20/(width/height)):Math.max(44,46/(width/height));
     worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);

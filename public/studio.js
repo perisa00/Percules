@@ -23,11 +23,11 @@ function show(id,world,focus=true,body=null){
   const article=articles.find(a=>a.dataset.content===key);if(!article)return;
   const selection=world+':'+(body?.id||key);if(current===selection&&!panel.hidden)return;
   current=selection;hidePreview();
-  const context=byId('object-context');context.hidden=!body||body.id==='sun'||body.id===key||world==='milica';
+  const context=byId('object-context');context.hidden=!body||(body.id==='sun'&&world!=='milica')||body.id===key||(world==='milica'&&body.id==='earth');
   if(!context.hidden){byId('object-context-title').textContent=body.headline;byId('object-context-description').textContent=body.text;}articles.forEach(a=>a.hidden=a!==article);panel.hidden=false;
   document.body.dataset.detail='open';panel.setAttribute('aria-labelledby',article.id+'-title');
-  byId('detail-close').setAttribute('aria-label','Zatvori detalje i vrati ceo sistem');
-  byId('detail-index').textContent=world==='milica'?'MILIČIN SVET':'PERCULES / '+String(articles.indexOf(article)+1).padStart(2,'0');
+  byId('detail-close').setAttribute('aria-label',world==='milica'?'Zatvori detalje i vrati celu teretanu':'Zatvori detalje i vrati ceo sistem');
+  byId('detail-index').textContent=world==='milica'?'MILICA / ROZE TERETANA':'PERCULES / '+String(articles.indexOf(article)+1).padStart(2,'0');
   scroll.scrollTop=0;
   if(focus){const heading=article.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});}
 }
