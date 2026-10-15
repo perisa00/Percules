@@ -27,6 +27,10 @@ jobs:
           node --check scripts/check_studio.cjs
       - name: Check destinations, cameras, rendering and touch
         run: node scripts/check_studio.cjs
+      - name: Check workout contact and transitions
+        run: node scripts/check_workout.cjs
+      - name: Check phone flight and playback lifecycle
+        run: node scripts/check_phone.cjs
       - name: Install shader compiler
         timeout-minutes: 3
         run: |

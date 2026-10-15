@@ -5,7 +5,7 @@ const menu=byId('studio-menu'),toggle=byId('menu-toggle'),panel=byId('detail-pan
 const articles=[...scroll.querySelectorAll('[data-content]')];
 const destinations=globalThis.PerculesDestinations;
 const preview=byId('object-preview');
-let current=null,requested=null,origin=null,previewBody=null,previewKey='';
+let current=null,requested=null,origin=null,previewBody=null,previewKey='',readingOffline=false;
 articles.forEach(article=>{article.querySelector('h2').id=article.id+'-title';});
 function dispatch(type,detail){document.dispatchEvent(new CustomEvent(type,{detail}));}
 function hidePreview(){preview.hidden=true;previewBody=null;previewKey='';}
@@ -15,7 +15,7 @@ function menuOpen(open,restore=false){
   else if(restore)toggle.focus({preventScroll:true});
 }
 function close(restore=false){
-  panel.hidden=true;document.body.dataset.detail='closed';current=null;
+  panel.hidden=true;document.body.dataset.detail='closed';current=null;readingOffline=false;
   if(restore){const target=origin?.isConnected&&!origin.closest('[hidden]')?origin:byId('galaxy');target.focus({preventScroll:true});}
 }
 function show(id,world,focus=true,body=null){
@@ -23,17 +23,17 @@ function show(id,world,focus=true,body=null){
   const article=articles.find(a=>a.dataset.content===key);if(!article)return;
   const selection=world+':'+(body?.id||key);if(current===selection&&!panel.hidden)return;
   current=selection;hidePreview();
-  const context=byId('object-context');context.hidden=!body||body.id==='sun'||body.id===key||world==='milica';
+  const context=byId('object-context');context.hidden=!body||(body.id==='sun'&&world!=='milica')||body.id===key||(world==='milica'&&body.id==='earth');
   if(!context.hidden){byId('object-context-title').textContent=body.headline;byId('object-context-description').textContent=body.text;}articles.forEach(a=>a.hidden=a!==article);panel.hidden=false;
   document.body.dataset.detail='open';panel.setAttribute('aria-labelledby',article.id+'-title');
-  byId('detail-close').setAttribute('aria-label','Zatvori detalje i vrati ceo sistem');
-  byId('detail-index').textContent=world==='milica'?'MILIČIN SVET':'PERCULES / '+String(articles.indexOf(article)+1).padStart(2,'0');
+  byId('detail-close').setAttribute('aria-label',world==='milica'?'Zatvori detalje i vrati celu teretanu':'Zatvori detalje i vrati ceo sistem');
+  byId('detail-index').textContent=world==='milica'?'MILICA / ROZE TERETANA':'PERCULES / '+String(articles.indexOf(article)+1).padStart(2,'0');
   scroll.scrollTop=0;
   if(focus){const heading=article.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});}
 }
 function travel(element){
-  origin=element;hidePreview();menuOpen(false);close();
-  const id=element.dataset.destination||null,world=element.dataset.world||Object.keys(destinations).find(key=>destinations[key].body===id)||'studio';
+  readingOffline=false;origin=element;hidePreview();menuOpen(false);close();
+  const id=element.dataset.destination||null,requestedWorld=element.dataset.world||Object.keys(destinations).find(key=>destinations[key].body===id)||'studio',world=destinations[requestedWorld]?.world||requestedWorld;
   requested={world,id};
   dispatch('percules:navigate',requested);
 }
@@ -68,11 +68,14 @@ byId('about-toggle').addEventListener('click',()=>{menuOpen(false);close();});
 document.addEventListener('percules:scene',event=>{
   const {scene,world,body}=event.detail;
   if(scene==='planet'&&body){show(body.content||body.id,world,true,body);requested=null;}
-  else close();
+  else if(!readingOffline)close();
   if(scene!=='system')hidePreview();
 });
 document.addEventListener('percules:close',()=>{hidePreview();close();menuOpen(false);});
-document.addEventListener('percules:unavailable',()=>{if(requested)show(requested.id||'jupiter',requested.world);});
+function readRequested(){const world=requested?.world||byId('galaxy').dataset.zoomTarget||'studio';readingOffline=true;show(destinations[world]?.body||'milica',world);}
+document.addEventListener('percules:unavailable',readRequested);
+byId('loading-content').addEventListener('click',readRequested);
+byId('project-story').addEventListener('click',()=>{origin=byId('project-story');show('milica','milica');});
 document.addEventListener('pointerdown',event=>{if(!menu.hidden&&!event.target.closest('#studio-menu, #menu-toggle'))menuOpen(false);});
 document.addEventListener('keydown',event=>{
   if(event.key!=='Escape')return;

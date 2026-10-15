@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 190" fill="none">
+<defs><linearGradient id="petal" x1="113" y1="126" x2="10" y2="12" gradientUnits="userSpaceOnUse"><stop stop-color="#ff80bb" stop-opacity=".58"/><stop offset=".56" stop-color="#ffc9e9" stop-opacity=".3"/><stop offset="1" stop-color="#fff1fb" stop-opacity=".74"/></linearGradient></defs>
+<path d="M113 126C73 118 12 77 8 28C4-17 85 17 113 126Z" fill="url(#petal)" stroke="#ffd9f1" stroke-opacity=".8"/>
+<path d="M113 126C77 130 15 122 13 87C12 54 90 72 113 126Z" fill="url(#petal)" stroke="#ffd9f1" stroke-opacity=".72"/>
+<path d="M113 126C66 120 24 148 43 174C63 199 108 170 113 126Z" fill="url(#petal)" stroke="#ffd9f1" stroke-opacity=".7"/>
+<g stroke="#ffeafa" stroke-opacity=".48" stroke-width=".8"><path d="M113 126Q54 69 19 20M113 126Q63 99 24 85M113 126Q74 143 49 171"/><path d="M77 88Q57 47 42 30M66 76Q36 62 23 42M76 110Q49 116 32 103M88 142Q81 163 67 170"/></g>
+</svg>

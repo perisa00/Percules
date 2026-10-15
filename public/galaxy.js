@@ -57,7 +57,7 @@
   let draw, resizeRenderer;
   let flight=null,alignment=null,arrival=null,navigationTarget=null,pendingTeleport=false,teleportEnergy=0,worldDistance=20,worldFraming=0;
   let worldFlight=null,pendingSelection=null;
-  let solar=null,solarLoading=null,journey=0,center=[0,0,0],quality=1,slowFrames=0,qualityFrames=0,focusedBody=null,uiScene='';
+  let solar=null,solarLoading=null,zoomWorld=null,effectsLoading=false,journey=0,center=[0,0,0],quality=1,slowFrames=0,qualityFrames=0,focusedBody=null,uiScene='';
   const el=id=>document.getElementById(id),solarCanvas=el('solar'),marker=el('sun-marker'),planetNav=el('planet-nav');
   const destinations=globalThis.PerculesDestinations;
   const galaxyMarkers=Object.values(destinations).filter(d=>d.marker).map(d=>el(d.marker));
@@ -152,19 +152,22 @@
   function updateScene(scene){
     const world=solar?.worldId()||'studio',pink=world==='milica';
     const key=scene+(focusedBody?.id||'')+world+(flight||worldFlight?'teleport':'');if(uiScene===key)return;uiScene=key;
-    document.body.dataset.scene=scene;document.body.dataset.world=world;
+    document.body.dataset.scene=scene;el('project-story').hidden=!(pink&&scene==='system');document.body.dataset.world=world;
     const planet=scene==='planet',system=scene==='system',galaxy=scene==='galaxy';
+    document.body.dataset.theme=pink&&!galaxy?'pink':'space';
     sound({type:'scene',local:system||planet});
     el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?destinations[world].name.toLocaleUpperCase('sr-Latn'):galaxy?'MLEČNI PUT':'PUTOVANJE';
     el('location-index').textContent=galaxy?'01 / 03':planet?'03 / 03':'02 / 03';
-    el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'PROJEKAT · MILICA':'IZABERI SVOJ SLEDEĆI KORAK'):'PERCULES DIGITAL STUDIO';
-    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Miličin svet.':world==='studio'?'Percules.':destinations[world].name):'Svaki detalj je važan.';
-    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Roze sunce. Jedan svet. Puna posvećenost.':coarse?'Dodirni objekat da upoznaš njegovu priču.':'Pređi mišem preko objekta da upoznaš njegovu priču.'):'Pravimo sajtove i aplikacije kojima se posvećujemo od prvog razgovora.';
+    el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'PROJEKAT · MILICA PERSONAL TRAINER':'PERCULES · '+destinations[world].name.toLocaleUpperCase('sr-Latn')):'PERCULES DIGITAL STUDIO';
+    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Njen ritam. Naša pažnja.':world==='studio'?'Ideje pokreću. Detalji ostaju.':destinations[world].name):'Tvoja ideja. Naša puna pažnja.';
+    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Upoznaj Milicu kroz telefon ili istraži njenu roze teretanu.':world==='studio'?'Slušamo, stvaramo i doterujemo. Zajedno sa tobom.':'Iza svakog detalja stoji dobra ideja. Istraži kako je pretvaramo u iskustvo.'):'Upoznaj ljude, ideje i pažnju iza naših sajtova i aplikacija.';
     el('enter-solar').hidden=!galaxy;el('back-system').hidden=!planet;el('back-galaxy').hidden=galaxy||scene==='travel';
+    el('back-system').textContent=pink?'← Cela teretana':'← Ceo sistem';
     el('back-studio').hidden=true;
     planetNav.hidden=!(system||planet);el('scale-note').hidden=true;
-    el('planet-labels').hidden=!system;
-    el('gesture-hint').textContent=system?(coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
+    el('gym-workout').hidden=!(pink&&system);
+    el('planet-labels').hidden=!system||pink;
+    el('gesture-hint').textContent=system?(pink?'IZABERI ZONU ISPOD · PREVUCI ZA ROTACIJU':coarse?'DODIRNI OBJEKAT DA ISTRAŽIŠ':'PREĐI MIŠEM PREKO OBJEKTA · KLIK ZA DETALJE'):coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
     if(galaxy||scene==='travel')el('studio-emblem').hidden=true;
     canvas.setAttribute('aria-label',planet?'Interaktivni prikaz: '+focusedBody.name:system?destinations[world].name:'Interaktivna galaksija');
     planetNav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.planet===focusedBody?.id)));
@@ -172,9 +175,15 @@
   }
   function rebuildNav(){
     planetNav.replaceChildren();
-    for(const body of solar.getBodies()){const button=document.createElement('button');button.textContent=body.name;button.dataset.planet=body.id;button.setAttribute('aria-pressed','false');button.addEventListener('click',event=>{pendingSelection=null;solar.activate(body.id,coarse&&event.detail!==0);wake();});button.addEventListener('pointerenter',()=>{if(!coarse)solar.hover(body.id);});button.addEventListener('focus',()=>solar.hover(body.id));planetNav.append(button);}
+    for(const body of solar.getBodies()){
+      const button=document.createElement(body.href?'a':'button');button.textContent=body.name;button.dataset.planet=body.id;
+      if(body.href){button.href=body.href;button.target='_blank';button.rel='noopener noreferrer';button.setAttribute('aria-label',body.name+' — otvori sajt u novom tabu');}
+      else{button.setAttribute('aria-pressed','false');button.addEventListener('click',event=>{pendingSelection=null;solar.activate(body.id,coarse&&event.detail!==0);wake();});button.addEventListener('pointerenter',()=>{if(!coarse)solar.hover(body.id);});button.addEventListener('focus',()=>solar.hover(body.id));}
+      planetNav.append(button);
+    }
   }
   function changeWorld(world,id=null){
+    world=destinations[world]?.world||world;
     if(!solar||!destinations[world])return;
     if(world===solar.worldId()){solar.clearFocus();wake();return;}
     cancelTeleport();pendingSelection=null;
@@ -186,7 +195,7 @@
     wake();
   }
   function navigate(detail){
-    const world=detail.world||'studio',id=detail.id||null;
+    const requestedWorld=detail.world||'studio',world=destinations[requestedWorld]?.world||requestedWorld,id=detail.id||null;
     if(!destinations[world])return;
     if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){changeWorld(world,id);return;}
     cancelTeleport();pendingSelection={world,id};
@@ -194,23 +203,38 @@
     wake();
   }
   function ensureSolar(){
-    if(solar||solarLoading)return solarLoading;
+    if(solar)return Promise.resolve(solar);
+    if(solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
-    solarLoading=import('./solar.js?v=11').then(async module=>{
-      try{const {createShield,SHIELD_DURATION}=await import('./shield.js?v=19');shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));}
-      catch(e){console.warn('Arrival shield unavailable:',e);}
-      try{const {createJump,JUMP_DURATION,jumpPhase}=await import('./jump.js?v=17');jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);}
-      catch(e){console.warn('Jump effect unavailable:',e);}
-      solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onHover:detail=>document.dispatchEvent(new CustomEvent('percules:hover',{detail})),onDestination:world=>changeWorld(world),onSelect:body=>{
+    canvas.dataset.loading='true';
+    solarLoading=import('./solar.js?v=studio-refresh-1').then(module=>{
+      solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onProject:state=>{
+        const phone=el('milica-phone');phone.hidden=!state;
+        if(state){phone.style.left=state.x+'px';phone.style.top=state.y+'px';phone.style.setProperty('--phone-width',state.width+'px');phone.dataset.paused=String(state.paused);}
+      },onWorkout:state=>{
+        el('gym-workout-name').textContent=state.name;
+        el('gym-workout-count').textContent=(state.stage==='Sledeća stanica'?'SLEDEĆA STANICA':'MILICA TRENIRA')+' · '+String(state.index+1).padStart(2,'0')+' / '+String(state.count).padStart(2,'0');
+        const paused=state.paused||motion.matches;el('gym-pause').textContent=paused?'▷':'Ⅱ';el('gym-pause').setAttribute('aria-pressed',String(paused));el('gym-pause').setAttribute('aria-label',paused?'Nastavi trening':'Pauziraj trening');el('gym-pause').disabled=motion.matches;
+      },onExternal:url=>window.open(url,'_blank','noopener,noreferrer'),onHover:detail=>document.dispatchEvent(new CustomEvent('percules:hover',{detail})),onDestination:world=>changeWorld(world),onSelect:body=>{
         if(body){if(!arrival&&!worldFlight)cancelTeleport();sound({type:'select'});}focusedBody=body;vx=vy=0;
         if(body){const angle=body.id==='sun'?.25:Math.hypot(body.position[0],body.position[2])<.001?-.65:Math.atan2(-body.position[0],-body.position[2])+.6;toYaw=yaw+Math.atan2(Math.sin(angle-yaw),Math.cos(angle-yaw));toPitch=.32;}
         else {toPitch=.73;toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));}
         uiScene='';wake();
       },onError:()=>{error.textContent='Detaljan prikaz je prekinut. Vratite se na galaksiju ili osvežite stranicu.';error.hidden=false;}});
+      if(zoomWorld&&!pendingSelection)solar.setWorld(zoomWorld);
       rebuildNav();
       solar.size(width,height,dpr);canvas.dataset.solar='ready';error.hidden=true;wake();
-    }).catch(e=>{console.error('Solar initialization failed:',e);flight=null;toZoom=1;error.textContent='3D sistem nije učitan. Sadržaj možete otvoriti kroz Meni.';document.dispatchEvent(new CustomEvent('percules:unavailable'));error.hidden=false;solarLoading=null;wake();}).finally(()=>el('enter-solar').removeAttribute('aria-busy'));
+      ensureEffects();
+      return solar;
+    }).catch(e=>{console.error('Solar initialization failed:',e);cancelTeleport();pendingSelection=null;pendingTeleport=false;zoomWorld=null;zoom=toZoom=1;error.textContent='Veza je prekinuta. Priča je dostupna kroz Meni; „Ponovo učitaj” vraća prikaz.';document.dispatchEvent(new CustomEvent('percules:unavailable'));error.hidden=false;solarLoading=null;wake();}).finally(()=>{el('enter-solar').removeAttribute('aria-busy');canvas.dataset.loading='false';});
     return solarLoading;
+  }
+  // Decorative effects never delay the world or interrupt its animation loop.
+  function ensureEffects(){
+    if(effectsLoading||coarse||motion.matches||canvas.dataset.renderer!=='webgl')return;
+    effectsLoading=true;
+    import('./shield.js?v=19').then(({createShield,SHIELD_DURATION})=>{shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));wake();}).catch(e=>console.warn('Arrival effect unavailable:',e));
+    import('./jump.js?v=17').then(({createJump,JUMP_DURATION,jumpPhase})=>{jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);wake();}).catch(e=>console.warn('Travel effect unavailable:',e));
   }
   function enterSolar(){
     if(!solar){pendingTeleport=true;ensureSolar()?.then(()=>{if(solar&&pendingTeleport){pendingTeleport=false;enterSolar();}});return;}
@@ -221,12 +245,21 @@
   function changeZoom(delta){
     pendingSelection=null;pendingTeleport=false;if(flight||alignment)toZoom=zoom;cancelTeleport();
     if(journey>.92&&solar?.zoom(delta)){wake();return;}
-    
+    if(delta<0&&journey<.12&&!zoomWorld){
+      const nearest=mapPoints.filter(p=>p.depth>.1&&p.x>=0&&p.x<=width&&p.y>=0&&p.y<=height).sort((a,b)=>Math.hypot(a.x-width/2,a.y-height/2)-Math.hypot(b.x-width/2,b.y-height/2))[0];
+      zoomWorld=destinations[nearest?.id]?.world||nearest?.id||'studio';
+      solarPoint=[...destinations[zoomWorld].point];
+      if(solar){solar.setWorld(zoomWorld);solar.clearFocus();rebuildNav();}
+      canvas.dataset.zoomTarget=zoomWorld;
+    }
     toZoom=limitZoom(toZoom*Math.exp(clamp(delta,-500,500)*.00165));
+    if(toZoom>=1)zoomWorld=null;
     if(toZoom<.9)ensureSolar();wake();
   }
   function toggleMotion(){breathingEnabled=!breathingEnabled&&!motion.matches;el('motion-toggle').setAttribute('aria-pressed',String(!breathingEnabled));el('motion-toggle').textContent=breathingEnabled?'Pauziraj blage animacije':'Nastavi blage animacije';wake();}
-  const gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power', preserveDrawingBuffer: false });
+  let gl=null;
+  try{gl=canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power', preserveDrawingBuffer: false });}catch(e){console.warn('Galaxy WebGL unavailable:',e);}
+  const originalGL=gl,fallbackCanvas=el('galaxy-fallback');
 
   function sampleStellarCloud(image) {
     const surface = document.createElement('canvas');
@@ -268,6 +301,7 @@
   }
 
   function setupGL() {
+    if(gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT)?.precision===0)throw Error('Fragment precision unavailable');
     function compile(type, source) {
       const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s);
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
@@ -678,7 +712,9 @@
   }
 
   function setupFallback(){
-    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Grafički prikaz nije dostupan.');
+    gl=null;lost=false;
+    const ctx=fallbackCanvas.getContext('2d');if(!ctx)throw new Error('Grafički prikaz nije dostupan.');
+    fallbackCanvas.hidden=false;
     resizeRenderer=()=>{};
     draw=()=>{
       const w=canvas.width,h=canvas.height;ctx.fillStyle='#020309';ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation='lighter';
@@ -713,6 +749,7 @@
     el('gesture-hint').textContent=coarse?'DVA PRSTA: POMERANJE / ZUM':'PREVUCI ZA ROTACIJU · SHIFT + PREVUCI ZA POMERANJE';
     const pixels=width*height*dpr*dpr;if(pixels>2000000)dpr*=Math.sqrt(2000000/pixels);
     canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);fit=Math.max(21.8,(width<800&&height>550?32:22.4)/(width/height));resizeRenderer();solar?.size(width,height,dpr);canvas.dataset.quality=quality<1?'balanced':'full';wake();
+    fallbackCanvas.width=canvas.width;fallbackCanvas.height=canvas.height;
   }
   function frame(time){
     frameId=0;if(document.hidden||lost)return;
@@ -742,6 +779,8 @@
       if(t===1){if(flight.to<flight.from)arrival={start:flight.start+flight.duration*1000,age:Math.max(0,(time-flight.start-flight.duration*1000)/1000)};zoom=toZoom;flight=null;jumpProgress=-1;}
     }
     else zoom=Math.exp(lerp(Math.log(zoom),Math.log(toZoom),motion.matches?1:1-Math.exp(-dt*4.5)));
+    // Keep the galaxy visible while the destination module is still in flight.
+    if(!solar)zoom=Math.max(.78,zoom);
     if(worldFlight){
       const elapsed=(time-worldFlight.start)/1000;
       if(elapsed>=.40){
@@ -778,7 +817,7 @@
     solarAnchor=flowPoint(solarPoint);
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
-    const systemFit=solar?.worldId()==='milica'?Math.max(34,36/(width/height)):Math.max(44,46/(width/height));
+    const systemFit=solar?.worldId()==='milica'?Math.max(width<800&&height<700?44:28,22/(width/height)):Math.max(44,46/(width/height));
     worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);
@@ -796,10 +835,10 @@
       worldDistance=view.distance*solarScale;center=view.target.map((v,i)=>solarAnchor[i]+v*solarScale);worldFraming=view.framing;
     }
     // Both layers remain present. The local canvas has no separate background.
-    canvas.style.opacity='1';solarCanvas.style.opacity='1';updateStellarBeacons(dt);draw();
-    if(solar){try{solar.render({dt,yaw,pitch,roll:cameraRoll,progress:journey,reducedMotion:motion.matches||!breathingEnabled,quality,viewPrepared:true});}catch(e){console.error('Solar frame failed:',e);solar=null;solarLoading=null;focusedBody=null;flight=null;jumpProgress=-1;planetNav.replaceChildren();el('planet-labels').replaceChildren();toZoom=1;error.textContent='Detaljan prikaz je prekinut. Pokušajte ponovo dugmetom Istraži.';error.hidden=false;}}
-    drawHyperspace(time);
-    shieldRenderer?.render(shieldAge,width,height,dpr);
+    canvas.style.opacity=gl?'1':'0';updateStellarBeacons(dt);
+    try{draw();}catch(e){console.warn('Galaxy draw failed:',e);setupFallback();resize();draw();}
+    if(solar){try{solar.render({dt,yaw,pitch,roll:cameraRoll,progress:journey,reducedMotion:motion.matches||!breathingEnabled,quality,viewPrepared:true});}catch(e){solar.recover(e);}}
+    try{drawHyperspace(time);shieldRenderer?.render(shieldAge,width,height,dpr);}catch(e){console.warn('Travel effect stopped:',e);jumpRenderer=shieldRenderer=null;warpCanvas.style.opacity=el('shield').style.opacity='0';}
     updateScene(flight||worldFlight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
     canvas.dataset.journey=journey>.995?'arrived':journey<.005?'galaxy':'travel';canvas.dataset.navigation=alignment?'centering':flight?'jump':arrival?'braking':'continuous';
     const goal=flightOrigin();canvas.dataset.targetOffset=Math.hypot(...goal).toFixed(6);
@@ -817,7 +856,7 @@
   }
   function wake(){if(!frameId&&!document.hidden&&!lost)frameId=requestAnimationFrame(frame);}
   function interact(){wake();}
-  function reset(){toPanX=toPanY=0;pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
+  function reset(){zoomWorld=null;toPanX=toPanY=0;pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
   canvas.addEventListener('pointerdown',e=>{
     const panning=journey<.12&&(e.button===2||e.shiftKey);if(e.button!==0&&!panning)return;pointedWorld=null;canvas.style.cursor='';updateBeaconLight();pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false,mode:panning?'pan':'orbit'});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;lastCentroid=null;
     if(pointers.size===2){const [a,b]=[...pointers.values()];lastPinch=Math.hypot(a.x-b.x,a.y-b.y);lastCentroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};}canvas.classList.add('dragging');interact();
@@ -881,7 +920,7 @@
     button.addEventListener('focus',()=>{ensureSolar();focusedWorld=button.dataset.world;updateBeaconLight();});
     button.addEventListener('blur',()=>{focusedWorld=null;updateBeaconLight();});
   }
-  for(const id of ['brand-home','back-galaxy','reset-view'])el(id).addEventListener('click',reset);
+  for(const id of ['brand-home','back-galaxy','milica-back-galaxy','reset-view'])el(id).addEventListener('click',reset);
   document.addEventListener('percules:navigate',e=>navigate(e.detail||{}));
   document.addEventListener('percules:unfocus',()=>{pendingSelection=null;solar?.clearFocus();wake();});
   document.addEventListener('percules:object',e=>{if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){solar.activate(e.detail.id,!!e.detail.preview);wake();}});
@@ -890,16 +929,20 @@
   el('back-system').addEventListener('click',()=>{solar?.clearFocus();toZoom=.06;wake();});
   el('zoom-in').addEventListener('click',()=>changeZoom(-260));el('zoom-out').addEventListener('click',()=>changeZoom(260));
   el('motion-toggle').addEventListener('click',toggleMotion);
+  el('reload-scene').addEventListener('click',()=>window.location.reload());
+  el('gym-previous').addEventListener('click',()=>{solar?.stepWorkout(-1);wake();});
+  el('gym-next').addEventListener('click',()=>{solar?.stepWorkout(1);wake();});
+  el('gym-pause').addEventListener('click',()=>{if(!breathingEnabled&&!motion.matches){toggleMotion();solar?.pauseWorkout(false);}else solar?.pauseWorkout();wake();});
   el('about-toggle').addEventListener('click',()=>{const panel=el('about-panel');panel.hidden=!panel.hidden;el('about-toggle').setAttribute('aria-expanded',String(!panel.hidden));});
   document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;if(e.key==='Escape'){el('about-panel').hidden=true;el('about-toggle').setAttribute('aria-expanded','false');if(focusedBody)solar.clearFocus();wake();}});
   addEventListener('resize',resize);
   addEventListener('blur',()=>{pointers.clear();vx=vy=0;canvas.classList.remove('dragging');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameId);frameId=0;}else{previousTime=0;wake();}});
   motion.addEventListener('change',()=>{breathingEnabled=!motion.matches;el('motion-toggle').setAttribute('aria-pressed',String(!breathingEnabled));el('motion-toggle').textContent=breathingEnabled?'Pauziraj blage animacije':'Nastavi blage animacije';vx=vy=effectYaw=effectPitch=effectEnergy=breath=compression=flowPull=flowVelocity=0;wake();});
-  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;cancelAnimationFrame(frameId);frameId=0;});
-  canvas.addEventListener('webglcontextrestored',()=>{try{setupGL();lost=false;resize();}catch(e){error.textContent='Prikaz je prekinut. Osvežite stranicu da ponovo otvorite galaksiju.';error.hidden=false;}});
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();setupFallback();resize();wake();});
+  canvas.addEventListener('webglcontextrestored',()=>{try{gl=originalGL;setupGL();fallbackCanvas.hidden=true;lost=false;resize();}catch(e){console.warn('Galaxy restore failed:',e);setupFallback();resize();}});
   try{if(gl)setupGL();else setupFallback();resize();canvas.dataset.ready='true';}
-  catch(e){console.error('Galaxy initialization failed:',e);error.textContent='Galaksija nije mogla da se pokrene. Pokušajte da osvežite stranicu ili otvorite drugi pregledač.';error.hidden=false;}
+  catch(e){console.warn('Galaxy switched to Canvas:',e);try{setupFallback();resize();canvas.dataset.ready='true';}catch(failure){console.error(failure);error.textContent='Prikaz nije dostupan. Sadržaj i kontakt ostaju u Meniju.';error.hidden=false;}}
 })();
 
 
