@@ -115,9 +115,31 @@ solar.setWorld('milica');solar.activate('earth');assert.equal(externalLinks.at(-
 assert.equal(solar.isFocused(),false);
 console.log('Studio checks passed: eight separate galactic worlds, animated pink gym, mobile camera at 30/60/120 FPS, rendering, content and contact.');
 
+function checkCursorZoom(){
+  const s=createSolar(element());s.size(390,844,1);const state={dt:1/60,target:[0,0,0],distance:80,yaw:.25,pitch:.73,roll:-.2,reducedMotion:false};
+  const cy=Math.cos(state.yaw),sy=Math.sin(state.yaw),cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),cr=Math.cos(state.roll),sr=Math.sin(state.roll);
+  const right=[cr*cy+sr*sy*sp,-sr*cp,-cr*sy+sr*cy*sp],up=[sr*cy-cr*sy*sp,cr*cp,-sr*sy-cr*cy*sp],forward=[sy*cp,sp,cy*cp];
+  const dot=(a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0),x=285,y=335,f=844*1.20710678;
+  for(const focused of [false,true]){
+    s.clearFocus();if(focused)s.select('sun');
+    let view;for(let i=0;i<240;i++)view=s.camera(state);
+    const before=view.distance,point=view.target.map((v,i)=>v+right[i]*(x-195)*before/f+up[i]*(422-y-view.framing*422)*before/f);
+    s.zoom(-260,x,y);let first;
+    for(let i=0;i<240;i++){
+      view=s.camera(state);if(i===0)first=view.distance;
+      const relative=point.map((v,i)=>v-view.target[i]),depth=view.distance-dot(relative,forward);
+      const px=195+dot(relative,right)*f/depth,py=422-dot(relative,up)*f/depth-view.framing*422;
+      assert.ok(Math.hypot(px-x,py-y)<.001,'Local '+(focused?'focused':'overview')+' zoom must hold its cursor through every eased frame');
+    }
+    assert.ok(first<before&&first>view.distance,'Zoom must ease toward its target');assert.equal(s.isMoving(),false);
+  }
+  console.log('Cursor zoom checks passed: overview, focused object and all eased frames.');
+}
+checkCursorZoom();
+
 async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   let now=0,sequence=0;
-  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore;const imageEvents=[],unavailable=[];
+  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore;const imageEvents=[],unavailable=[],homeCalls=[];
   const corePromise=fault==='slow'||fault==='reject'?new Promise((resolve,reject)=>{resolveCore=resolve;rejectCore=reject;}):null;
   const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
   function node(id){
@@ -138,6 +160,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
+  if(fault==='home')context.PerculesPages={current:'apps',takeTransfer:()=>null,go:()=>false,prepareHome(){},home:view=>{homeCalls.push({time:now,view});return true;}};
   let script=galaxy.replace("import('./solar.js?v=routes-recovery-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
@@ -147,6 +170,31 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
+  if(fault==='home'){
+    for(let i=0;i<12;i++)await Promise.resolve();tick(3);
+    assert.equal(body.dataset.scene,'system');assert.equal(body.dataset.world,'apps');
+    const start=now;node('brand-home').listeners.click();
+    if(!reduced){assert.equal(homeCalls.length,0,'Do not change documents before the return flight');tick(10);assert.equal(homeCalls.length,0);assert.equal(body.dataset.scene,'travel');node('brand-home').listeners.click();}
+    tick(70);assert.equal(homeCalls.length,1,'A repeated logo click must not restart the flight');
+    assert.ok(homeCalls[0].time-start>=(reduced?0:500));
+    assert.ok(homeCalls[0].view&&homeCalls[0].view.zoom>=.35,'Hand the final map camera to the home document');
+    return;
+  }
+  if(fault==='zoom'){
+    const before=context.galaxyPoints().find(p=>p.depth>.1&&p.x>40&&p.x<350&&p.y>80&&p.y<760&&Math.hypot(p.x-195,p.y-422)>30);
+    assert.ok(before);
+    node('galaxy').listeners.wheel({deltaY:-220,deltaMode:0,clientX:before.x,clientY:before.y,preventDefault(){}});tick(4);
+    const after=context.galaxyPoints().find(p=>p.id===before.id);
+    assert.ok(Math.hypot(after.x-before.x,after.y-before.y)<.01,'Wheel zoom must hold the star under the cursor');
+    assert.equal(body.dataset.scene,'galaxy','Exploring with wheel must not teleport to a different star');
+    const gesture=(type,id,x,y)=>node('galaxy').listeners[type]({type,button:0,pointerId:id,clientX:x,clientY:y,timeStamp:now,pointerType:'touch'});
+    gesture('pointerdown',1,after.x-25,after.y);gesture('pointerdown',2,after.x+25,after.y);
+    gesture('pointermove',1,after.x-45,after.y);tick(4);gesture('pointermove',2,after.x+45,after.y);tick(4);
+    const pinched=context.galaxyPoints().find(p=>p.id===before.id);
+    assert.ok(Math.hypot(pinched.x-before.x,pinched.y-before.y)<.02,'Pinch must hold its midpoint, including movement of both fingers');
+    gesture('pointerup',1,after.x-45,after.y);gesture('pointerup',2,after.x+45,after.y);
+    return;
+  }
   if(fault){
     const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
     if(fault==='context'){
@@ -295,8 +343,10 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   key('Home');tick(80);key('ArrowLeft');key('ArrowRight',true);tick(80);
   const nearest=context.galaxyPoints().filter(p=>p.depth>.1&&p.x>=0&&p.x<=390&&p.y>=0&&p.y<=844).sort((a,b)=>Math.hypot(a.x-195,a.y-422)-Math.hypot(b.x-195,b.y-422))[0];
   const expectedWorld=context.PerculesDestinations[nearest.id].world||nearest.id;
-  key('+');assert.equal(node('galaxy').dataset.zoomTarget,expectedWorld,'Zoom must choose the screen center after returning from Milica');
+  key('+');
   for(let i=0;i<12;i++)key('+');tick(120);
+  assert.equal(body.dataset.scene,'galaxy','Manual zoom stays on the map until a destination is chosen');
+  navigate(expectedWorld);for(let i=0;i<12;i++)await Promise.resolve();tick(120);
   assert.equal(body.dataset.world,expectedWorld);assert.equal(body.dataset.scene,'system');
   assert.ok(sceneEvents.some(event=>event.world==='milica'));
   if(reduced)assert.ok(shieldFrames.every(age=>age<0),'Reduced motion should skip shield');
@@ -319,8 +369,10 @@ function checkTouch(){
  console.log('Touch checks passed: panel scrolling, edge containment, galaxy drag and multi-touch.');
 }
 checkTouch();
-checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true)).then(async()=>{
-  for(const fault of ['slow','reject','effects','context'])await checkNavigation(false,false,fault==='effects'||fault==='context',fault);
+const cameraOnly=process.argv.includes('--camera');
+(cameraOnly?Promise.resolve():checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true))).then(async()=>{
+  for(const fault of cameraOnly?['home']:['slow','reject','effects','context','home'])await checkNavigation(false,false,fault==='effects'||fault==='context'||fault==='home',fault);
+  await checkNavigation(true,false,true,'home');await checkNavigation(true,true,true,'zoom');
   checkSolarRecovery();checkSound();checkShaders();console.log('Navigation and resilience checks passed: center zoom, slow/failed core, stalled effects, WebGL recovery, quiet opt-in audio and single frame loop.');
 }).catch(error=>{console.error(error);process.exitCode=1;});
 
