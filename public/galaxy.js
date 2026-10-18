@@ -218,7 +218,7 @@
     if(solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
     canvas.dataset.loading='true';
-    solarLoading=import('./solar.js?v=routes-recovery-1').then(module=>{
+    solarLoading=import('./solar.js?v=cursor-flight-1').then(module=>{
       solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onProject:state=>{
         const phone=el('milica-phone');phone.hidden=!state;
         if(state){phone.style.left=state.x+'px';phone.style.top=state.y+'px';phone.style.setProperty('--phone-width',state.width+'px');phone.dataset.paused=String(state.paused);}
