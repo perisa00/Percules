@@ -1,4 +1,4 @@
-import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=5';
+import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=recovery-1';
 import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=3';
 import {createStudioGeometry} from './space-studio.js?v=1';
 const TAU = Math.PI * 2;
@@ -548,6 +548,7 @@ export function createSolar(canvas, options={}) {
     fallbackContext=fallbackCanvas.getContext('2d');
     if(!fallbackContext)throw Error('World Canvas unavailable');
     fallbackCanvas.hidden=false;canvas.style.opacity='0';canvas.dataset.renderer='canvas';
+    if(world==='milica')prepareGym();
     size(width,height,dpr);options.onInvalidate?.();
     if(reason)console.warn('World switched to Canvas:',reason);
   }
@@ -562,8 +563,9 @@ export function createSolar(canvas, options={}) {
       return {...mesh,buffer,count:mesh.data.length/10};
     });
   }
-  let gymGeometry=null;
+  let gymGeometry=null,gymFallbackGeometry=null;
   function prepareGym(){
+    if(!gl){if(!gymFallbackGeometry)gymFallbackGeometry=createGymGeometry({lowDetail:true});return;}
     if(!gymGeometry)gymGeometry=createGymGeometry();
     if(gl&&resources&&!resources.gymBuffers.length)resources.gymBuffers=gymGeometry.map(mesh=>{
       const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,mesh.data,gl.STATIC_DRAW);
@@ -606,7 +608,7 @@ export function createSolar(canvas, options={}) {
     const image=new Image();images.set(key,image);image.decoding='async';
     image.onload=()=>{if(!lost&&resources)upload(id,image,high);options.onInvalidate?.();};
     image.onerror=()=>{images.delete(key);if(high)highRequested.delete(id);};
-    image.src=`assets/solar/${key}.webp`;
+    image.src=`/assets/solar/${key}.webp`;
   }
   function upload(id,image,high){
     const record=resources.textures.get(id);if(!record||(record.high&&!high))return;
@@ -843,7 +845,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
       const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';
       for(let i=0;i<110;i++){const x=((i*137.51+yaw*12)%width+width)%width,y=((i*i*37.71+pitch*12)%height+height)%height;ctx.fillRect(x,y,i%7===0?2:1,i%7===0?2:1);}
-      ctx.globalAlpha=1;drawGymFallback(ctx,gymGeometry,p=>project(p,yaw,pitch),focus?.id,gymTime,gymState);updateLabels(yaw,pitch,lastProgress);return;
+      ctx.globalAlpha=1;drawGymFallback(ctx,gymFallbackGeometry,p=>project(p,yaw,pitch),focus?.id,gymTime,gymState);updateLabels(yaw,pitch,lastProgress);return;
     }
     for(const b of bodies){const v=project(b.position,yaw,pitch),r=Math.max(2,b.radius*v.scale);if(v.depth<=0)continue;
       const g=ctx.createRadialGradient(v.x-r*.28,v.y-r*.2,r*.1,v.x,v.y,r);g.addColorStop(0,`rgb(${b.color.map(c=>Math.round(c*255)).join(',')})`);g.addColorStop(1,'#070b14');ctx.fillStyle=g;ctx.beginPath();ctx.arc(v.x,v.y,r,0,TAU);ctx.fill();
@@ -856,4 +858,5 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   canvas.dataset.focus='system';canvas.dataset.world=world;
   return {render,camera,size,select,clearFocus,zoom,setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,recover:useFallback,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
 }
+
 

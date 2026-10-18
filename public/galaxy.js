@@ -4,6 +4,8 @@
   const error = document.getElementById('render-error');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const coarse = matchMedia('(pointer: coarse)').matches;
+  const pages=globalThis.PerculesPages,pageWorld=pages?.current||null,transfer=pages?.takeTransfer();
+  let entryLoading=!!pageWorld&&!transfer;
   const TAU = Math.PI * 2;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -52,6 +54,8 @@
   let frameId = 0, previousTime = 0, lost = false;
   let pointers = new Map(), lastPinch = 0, lastCentroid=null;
   let panX=0,panY=0,toPanX=0,toPanY=0;
+  if(transfer){yaw=toYaw=transfer.yaw;pitch=toPitch=transfer.pitch;zoom=toZoom=transfer.zoom;panX=toPanX=transfer.panX;panY=toPanY=transfer.panY;document.body.dataset.entryLoading='false';}
+  function pageView(){return journey<.12?{yaw,pitch,zoom:Math.max(.72,zoom),panX,panY}:null;}
   function panBy(dx,dy){if(journey>=.12||alignment||flight)return;toPanX=clamp(toPanX+dx/width,-.32,.32);toPanY=clamp(toPanY+dy/height,-.26,.26);vx=vy=0;wake();}
   let mapPoints=[],hoveredWorld=null,focusedWorld=null,pointedWorld=null,litWorld=null;
   let draw, resizeRenderer;
@@ -194,20 +198,26 @@
     document.dispatchEvent(new CustomEvent('percules:close'));
     wake();
   }
+  function requestWorld(world,id=null){
+    canvas.dataset.requestedWorld=world;
+    document.dispatchEvent(new CustomEvent('percules:request',{detail:{world,id}}));
+  }
   function navigate(detail){
     const requestedWorld=detail.world||'studio',world=destinations[requestedWorld]?.world||requestedWorld,id=detail.id||null;
     if(!destinations[world])return;
+    requestWorld(world,id);
+    if(pages?.go(world,pageView()))return;
     if(journey>.98&&solar&&!flight&&!alignment&&!worldFlight){changeWorld(world,id);return;}
     cancelTeleport();pendingSelection={world,id};
-    ensureSolar()?.then(()=>{if(solar&&pendingSelection)enterSolar();else if(!solar)document.dispatchEvent(new CustomEvent('percules:unavailable'));});
+    ensureSolar()?.then(()=>{if(solar&&pendingSelection)enterSolar();else if(!solar)document.dispatchEvent(new CustomEvent('percules:unavailable',{detail:{world:canvas.dataset.requestedWorld||zoomWorld||'studio'}}));});
     wake();
   }
   function ensureSolar(){
-    if(solar)return Promise.resolve(solar);
+    if(solar){ensureEffects();return Promise.resolve(solar);}
     if(solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
     canvas.dataset.loading='true';
-    solarLoading=import('./solar.js?v=3d-studio-1').then(module=>{
+    solarLoading=import('./solar.js?v=routes-recovery-1').then(module=>{
       solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onProject:state=>{
         const phone=el('milica-phone');phone.hidden=!state;
         if(state){phone.style.left=state.x+'px';phone.style.top=state.y+'px';phone.style.setProperty('--phone-width',state.width+'px');phone.dataset.paused=String(state.paused);}
@@ -226,15 +236,17 @@
       solar.size(width,height,dpr);canvas.dataset.solar='ready';error.hidden=true;wake();
       ensureEffects();
       return solar;
-    }).catch(e=>{console.error('Solar initialization failed:',e);cancelTeleport();pendingSelection=null;pendingTeleport=false;zoomWorld=null;zoom=toZoom=1;error.textContent='Veza je prekinuta. Priča je dostupna kroz Meni; „Ponovo učitaj” vraća prikaz.';document.dispatchEvent(new CustomEvent('percules:unavailable'));error.hidden=false;solarLoading=null;wake();}).finally(()=>{el('enter-solar').removeAttribute('aria-busy');canvas.dataset.loading='false';});
+    }).catch(e=>{console.error('Solar initialization failed:',e);cancelTeleport();pendingSelection=null;pendingTeleport=false;zoomWorld=null;zoom=toZoom=1;error.textContent='Veza je prekinuta. Priča je dostupna kroz Meni; „Ponovo učitaj” vraća prikaz.';document.dispatchEvent(new CustomEvent('percules:unavailable',{detail:{world:canvas.dataset.requestedWorld||zoomWorld||'studio'}}));error.hidden=false;solarLoading=null;wake();}).finally(()=>{el('enter-solar').removeAttribute('aria-busy');canvas.dataset.loading='false';});
     return solarLoading;
   }
   // Decorative effects never delay the world or interrupt its animation loop.
   function ensureEffects(){
     if(effectsLoading||coarse||motion.matches||canvas.dataset.renderer!=='webgl')return;
     effectsLoading=true;
-    import('./shield.js?v=19').then(({createShield,SHIELD_DURATION})=>{shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'));wake();}).catch(e=>console.warn('Arrival effect unavailable:',e));
-    import('./jump.js?v=17').then(({createJump,JUMP_DURATION,jumpPhase})=>{jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas);wake();}).catch(e=>console.warn('Travel effect unavailable:',e));
+    const jobs=[];
+    if(!shieldRenderer)jobs.push(import('./shield.js?v=recovery-1').then(({createShield,SHIELD_DURATION})=>{shieldDuration=SHIELD_DURATION;shieldRenderer=createShield(el('shield'),{onInvalidate:wake});wake();}).catch(e=>console.warn('Arrival effect unavailable:',e)));
+    if(!jumpRenderer)jobs.push(import('./jump.js?v=recovery-1').then(({createJump,JUMP_DURATION,jumpPhase})=>{jumpDuration=JUMP_DURATION;phaseForJump=jumpPhase;jumpRenderer=createJump(warpCanvas,{onInvalidate:wake});wake();}).catch(e=>console.warn('Travel effect unavailable:',e)));
+    Promise.allSettled(jobs).finally(()=>{effectsLoading=false;});
   }
   function enterSolar(){
     if(!solar){pendingTeleport=true;ensureSolar()?.then(()=>{if(solar&&pendingTeleport){pendingTeleport=false;enterSolar();}});return;}
@@ -250,15 +262,18 @@
       zoomWorld=destinations[nearest?.id]?.world||nearest?.id||'studio';
       solarPoint=[...destinations[zoomWorld].point];
       if(solar){solar.setWorld(zoomWorld);solar.clearFocus();rebuildNav();}
-      canvas.dataset.zoomTarget=zoomWorld;
+      canvas.dataset.zoomTarget=zoomWorld;requestWorld(zoomWorld);
     }
     toZoom=limitZoom(toZoom*Math.exp(clamp(delta,-500,500)*.00165));
+    if(!pageWorld&&toZoom<.74&&zoomWorld&&pages?.go(zoomWorld,pageView()))return;
+    if(pageWorld&&toZoom>.74&&pages?.home())return;
     if(toZoom>=1)zoomWorld=null;
     if(toZoom<.9)ensureSolar();wake();
   }
   function toggleMotion(){breathingEnabled=!breathingEnabled&&!motion.matches;el('motion-toggle').setAttribute('aria-pressed',String(!breathingEnabled));el('motion-toggle').textContent=breathingEnabled?'Pauziraj blage animacije':'Nastavi blage animacije';wake();}
   let gl=null;
   try{gl=canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power', preserveDrawingBuffer: false });}catch(e){console.warn('Galaxy WebGL unavailable:',e);}
+  let rendererGeneration=0;
   const originalGL=gl,fallbackCanvas=el('galaxy-fallback');
 
   function sampleStellarCloud(image) {
@@ -301,6 +316,7 @@
   }
 
   function setupGL() {
+    const rendererGL=gl,generation=++rendererGeneration;
     if(gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT)?.precision===0)throw Error('Fragment precision unavailable');
     function compile(type, source) {
       const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s);
@@ -557,7 +573,8 @@
     for(const key of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,key,gl.CLAMP_TO_EDGE);
     const galaxyImage=new Image();
     galaxyImage.onload=()=>{
-      if(gl.isContextLost())return;
+      if(gl!==rendererGL||generation!==rendererGeneration||rendererGL.isContextLost())return;
+      try{
       const surface=document.createElement('canvas');surface.width=surface.height=coarse?1024:2048;
       surface.getContext('2d').drawImage(galaxyImage,0,0,surface.width,surface.height);
       gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
@@ -567,9 +584,10 @@
       if(anisotropy)gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
       gl.bindBuffer(gl.ARRAY_BUFFER,starsBuffer);gl.bufferData(gl.ARRAY_BUFFER,sampleStellarCloud(galaxyImage),gl.STATIC_DRAW);
       textureReady=true;canvas.dataset.detail='high';wake();
+      }catch(error){canvas.dataset.detail='procedural';console.warn('Galaxy texture unavailable:',error);}
     };
     galaxyImage.onerror=()=>{canvas.dataset.detail='procedural';};
-    galaxyImage.src='assets/galaxy-face-on-v2.webp';
+    galaxyImage.src='/assets/galaxy-face-on-v2.webp';
     const pa=['aPosition','aColor','aSize','aStrength'].map(n=>gl.getAttribLocation(pointProgram,n));
     const da=gl.getAttribLocation(diskProgram,'aPosition'),ga=gl.getAttribLocation(glowProgram,'aPosition'),enabled=new Set();
     function attributes(descriptors){
@@ -712,7 +730,7 @@
   }
 
   function setupFallback(){
-    gl=null;lost=false;
+    ++rendererGeneration;gl=null;lost=false;
     const ctx=fallbackCanvas.getContext('2d');if(!ctx)throw new Error('Grafički prikaz nije dostupan.');
     fallbackCanvas.hidden=false;
     resizeRenderer=()=>{};
@@ -839,7 +857,7 @@
     try{draw();}catch(e){console.warn('Galaxy draw failed:',e);setupFallback();resize();draw();}
     if(solar){try{solar.render({dt,yaw,pitch,roll:cameraRoll,progress:journey,reducedMotion:motion.matches||!breathingEnabled,quality,viewPrepared:true});}catch(e){solar.recover(e);}}
     try{drawHyperspace(time);shieldRenderer?.render(shieldAge,width,height,dpr);}catch(e){console.warn('Travel effect stopped:',e);jumpRenderer=shieldRenderer=null;warpCanvas.style.opacity=el('shield').style.opacity='0';}
-    updateScene(flight||worldFlight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
+    if(!entryLoading)updateScene(flight||worldFlight?'travel':journey<.12?'galaxy':journey>.98&&solar?(focusedBody?'planet':'system'):'travel');
     canvas.dataset.journey=journey>.995?'arrived':journey<.005?'galaxy':'travel';canvas.dataset.navigation=alignment?'centering':flight?'jump':arrival?'braking':'continuous';
     const goal=flightOrigin();canvas.dataset.targetOffset=Math.hypot(...goal).toFixed(6);
     mapPoints=galaxyMarkers.map(beacon=>({
@@ -856,7 +874,7 @@
   }
   function wake(){if(!frameId&&!document.hidden&&!lost)frameId=requestAnimationFrame(frame);}
   function interact(){wake();}
-  function reset(){zoomWorld=null;toPanX=toPanY=0;pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
+  function reset(event){event?.preventDefault?.();if(pages?.home())return;zoomWorld=null;toPanX=toPanY=0;pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
   canvas.addEventListener('pointerdown',e=>{
     const panning=journey<.12&&(e.button===2||e.shiftKey);if(e.button!==0&&!panning)return;pointedWorld=null;canvas.style.cursor='';updateBeaconLight();pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false,mode:panning?'pan':'orbit'});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;lastCentroid=null;
     if(pointers.size===2){const [a,b]=[...pointers.values()];lastPinch=Math.hypot(a.x-b.x,a.y-b.y);lastCentroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};}canvas.classList.add('dragging');interact();
@@ -915,9 +933,9 @@
   el('enter-solar').addEventListener('click',()=>navigate({world:'studio',id:'sun'}));
   el('enter-solar').addEventListener('pointerenter',ensureSolar);el('enter-solar').addEventListener('focus',ensureSolar);
   for(const button of galaxyMarkers){
-    button.addEventListener('pointerenter',()=>{ensureSolar();hoveredWorld=button.dataset.world;updateBeaconLight();});
+    button.addEventListener('pointerenter',()=>{if(!pages)ensureSolar();hoveredWorld=button.dataset.world;updateBeaconLight();});
     button.addEventListener('pointerleave',()=>{hoveredWorld=null;updateBeaconLight();});
-    button.addEventListener('focus',()=>{ensureSolar();focusedWorld=button.dataset.world;updateBeaconLight();});
+    button.addEventListener('focus',()=>{if(!pages)ensureSolar();focusedWorld=button.dataset.world;updateBeaconLight();});
     button.addEventListener('blur',()=>{focusedWorld=null;updateBeaconLight();});
   }
   for(const id of ['brand-home','back-galaxy','milica-back-galaxy','reset-view'])el(id).addEventListener('click',reset);
@@ -943,7 +961,18 @@
   canvas.addEventListener('webglcontextrestored',()=>{try{gl=originalGL;setupGL();fallbackCanvas.hidden=true;lost=false;resize();}catch(e){console.warn('Galaxy restore failed:',e);setupFallback();resize();}});
   try{if(gl)setupGL();else setupFallback();resize();canvas.dataset.ready='true';}
   catch(e){console.warn('Galaxy switched to Canvas:',e);try{setupFallback();resize();canvas.dataset.ready='true';}catch(failure){console.error(failure);error.textContent='Prikaz nije dostupan. Sadržaj i kontakt ostaju u Meniju.';error.hidden=false;}}
+  if(pageWorld){
+    requestWorld(pageWorld);
+    if(transfer)navigate({world:pageWorld});
+    else ensureSolar().then(()=>{
+      entryLoading=false;document.body.dataset.entryLoading='false';
+      if(!solar)return;
+      solarPoint=[...destinations[pageWorld].point];solar.setWorld(pageWorld);solar.clearFocus();rebuildNav();
+      zoom=toZoom=cameraLimits.minZoom;navigationTarget=()=>flowPoint(solarPoint);uiScene='';wake();
+    });
+  }
 })();
+
 
 
 

@@ -27,6 +27,11 @@ jobs:
           node --check scripts/check_studio.cjs
       - name: Check destinations, cameras, rendering and touch
         run: node scripts/check_studio.cjs
+      - name: Check real page navigation and effect restoration
+        run: |
+          node scripts/check_pages.cjs
+          node scripts/check_recovery.cjs
+          node scripts/check_studio_ui.cjs
       - name: Check workout contact and transitions
         run: node scripts/check_workout.cjs
       - name: Check phone flight and playback lifecycle
@@ -43,3 +48,4 @@ jobs:
           fi
       - name: Compile and link WebGL shaders
         run: node scripts/check_studio.cjs --shaders
+
