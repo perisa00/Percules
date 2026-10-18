@@ -11,7 +11,7 @@ def expected_pages():
     result={}
     for world,item in route_definitions().items():
         page=template.replace('<body>','<body data-entry-world="'+world+'" data-entry-loading="true" data-scene="system" data-world="'+world+'">')
-        page=page.replace('</head>','<link rel="modulepreload" href="/solar.js?v=routes-recovery-1">\n</head>')
+        page=page.replace('</head>','<link rel="modulepreload" href="/solar.js?v=cursor-flight-1">\n</head>')
         page=re.sub(r'<title>.*?</title>','<title>'+item['title']+' — Percules Digital Studio</title>',page)
         page=re.sub(r'(<meta name="description" content=")[^"]*',lambda m:m[1]+item['description'],page)
         page=page.replace('rel="canonical" href="https://percules.rs/"','rel="canonical" href="https://percules.rs'+item['path']+'"')

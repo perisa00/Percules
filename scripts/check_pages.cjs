@@ -25,7 +25,7 @@ for(const [world,item] of Object.entries(root.api.routes)){
  const html=fs.readFileSync('public'+item.path+'index.html','utf8');
  assert.ok(html.includes('data-entry-world="'+world+'"'),'Direct route must boot its own world');
  assert.ok(html.includes('rel="canonical" href="https://percules.rs'+item.path+'"'));
- assert.ok(html.includes('<script src="/pages.js?v=1" defer>'));
+ assert.ok(html.includes('<script src="/pages.js?v=2" defer>'));
  for(const item of Object.values(root.api.routes))assert.ok(html.includes('href="'+item.path+'"'),'All destinations must expose a native link');
  assert.ok(html.includes('<a')&&html.includes('href="/"'),'Each page must have a native way back');
  assert.ok(!/(?:href|src|poster)="(?:assets\/|[a-z-]+\.js)/.test(html),'Nested page assets must resolve from the site root');

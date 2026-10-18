@@ -161,7 +161,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
   if(fault==='home')context.PerculesPages={current:'apps',takeTransfer:()=>null,go:()=>false,prepareHome(){},home:view=>{homeCalls.push({time:now,view});return true;}};
-  let script=galaxy.replace("import('./solar.js?v=routes-recovery-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=cursor-flight-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
