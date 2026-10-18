@@ -84,6 +84,9 @@ class SiteHTMLParser(HTMLParser):
                 if is_external(src):
                     self.errors.append(f"spoljna JavaScript datoteka nije dozvoljena: {src}")
 
+        if tag == "video" and "poster" in data:
+            self.references.append((tag, "poster", data["poster"].strip()))
+
         element_id = data.get("id")
         if element_id:
             self.ids.add(element_id)
