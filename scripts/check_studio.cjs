@@ -5,15 +5,15 @@ const vm=require('node:vm');
 const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const source=['gym-workout.js','space-gym.js','space-studio.js','solar.js'].map(file=>fs.readFileSync('public/'+file,'utf8').replace(/^import .*;\r?\n/gm,'')).join('\n');
+const source=['gym-workout.js','space-gym.js','space-studio.js','generated-rock.js','space-debris.js','solar.js'].map(file=>fs.readFileSync('public/'+file,'utf8').replace(/^import .*;\r?\n/gm,'')).join('\n');
 const shaderPairs=[],draws=[],uploads=[],gymUniforms=[],viewUniforms=new Map();
-let currentSources=[],id=0;
+let currentSources=[],id=0;const textureRequests=[],mapUsage=[];
 const gl=new Proxy({
 VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,
 getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type}),
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
-getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:(p,name)=>({name}),uniform3fv:(u,v)=>{viewUniforms.set(u.name,Array.from(v));if(u.name==='uOffset')gymUniforms.push(Array.from(v));},uniform1f:(u,v)=>{viewUniforms.set(u.name,v);if(u.name==='uAngle')gymUniforms.push(v);},
+getAttribLocation:(p,name)=>name==='aUv'?1:0,getUniformLocation:(p,name)=>({name}),uniform3fv:(u,v)=>{viewUniforms.set(u.name,Array.from(v));if(u.name==='uOffset')gymUniforms.push(Array.from(v));},uniform1f:(u,v)=>{viewUniforms.set(u.name,v);if(u.name==='uAngle')gymUniforms.push(v);if(u.name==='uHasMap')mapUsage.push(v);},
 uniformMatrix4fv:(u,transpose,v)=>{if(u.name==='uModel')gymUniforms.push(Array.from(v));},
 bufferSubData:(target,offset,data)=>uploads.push(Array.from(data)),createBuffer:()=>({}),createTexture:()=>({}),drawElements:(...args)=>draws.push(args),drawArrays:(...args)=>draws.push(args),
 }, {get:(object,key)=>key in object?object[key]:()=>{}});
@@ -26,10 +26,15 @@ const fallbackCanvas=element(),fallback2d=new Proxy({createRadialGradient:()=>({
 fallbackCanvas.getContext=()=>fallback2d;
 const context={Math,Map,Set,Float32Array,Uint16Array,Uint8Array,
 document:{getElementById:id=>id==='planet-labels'?labels:id==='solar-fallback'?fallbackCanvas:emblem,createElement:element},
-Image:function(){throw Error('Procedural studio must not download planetary images');}};
+Image:function(){textureRequests.push(this);}};
 vm.createContext(context);
 vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,worlds,bodies};',context);
 const {createSolar,worlds}=context.api;
+const debris=vm.runInContext('createDebrisGeometry(true)',context),debrisDesktop=vm.runInContext('createDebrisGeometry(false)',context);
+assert.equal(debris.instances,5);assert.equal(debrisDesktop.instances,9);assert.ok(debris.count/3<4200,'Phone debris must stay below 4200 triangles in one batch');assert.ok(debris.data.every(Number.isFinite));
+for(let i=0;i<debris.data.length;i+=9)assert.ok(Math.abs(Math.hypot(...debris.data.slice(i+3,i+6))-1)<.001);
+const provenance=JSON.parse(fs.readFileSync('public/assets/debris/provenance.json','utf8'));
+assert.equal(provenance.generator,'TRELLIS.2');assert.ok(provenance.triangles<1000&&provenance.sourceTriangles>400000);assert.ok(fs.statSync('public/generated-rock.js').size<45000);
 assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,4);
 const gymMeshes=vm.runInContext('createGymGeometry()',context);
 const smallGym=vm.runInContext('createGymGeometry({lowDetail:true})',context);
@@ -53,9 +58,13 @@ assert.equal(new Set(list.map(b=>b.id)).size,list.length);
 for(const b of list){assert.ok(b.position.every(Number.isFinite));assert.ok(b.radius>0);}
 }
 const solar=createSolar(canvas,{onSelect:body=>selections.push(body?.id||null),onHover:detail=>previews.push(detail),onDestination:world=>portals.push(world),onExternal:url=>externalLinks.push(url)});
+assert.equal(textureRequests.length,0,'Idle renderer creation must not fetch planet textures');
 solar.size(390,844,1.25);
 assert.equal(labels.children.length,4);assert.equal(solar.worldId(),'studio');
 solar.setWorld('contact');solar.select('venus');assert.equal(solar.focusId(),'venus');
+assert.ok(textureRequests.some(image=>image.src==='/assets/solar/venus.webp'),'A selected planet must request its high-resolution surface');
+for(const image of textureRequests){assert.ok(fs.existsSync('public'+image.src),'A mapped surface must exist');image.onload();}
+solar.camera({dt:1/60,target:[0,0,0],distance:80,reducedMotion:true});mapUsage.length=0;solar.render({dt:1/60,yaw:.25,pitch:.73,progress:1,reducedMotion:true,viewPrepared:true});assert.ok(mapUsage.some(v=>v===1),'Actual planet maps must reach the surface shader');
 solar.select('invalid');assert.equal(solar.focusId(),'venus');
 for(const rate of [30,60,120]){
 solar.setWorld('milica');solar.clearFocus();solar.camera({dt:1/rate,target:[0,0,0],distance:150,reducedMotion:true});
@@ -171,7 +180,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     context.requestIdleCallback=fn=>idle.push(fn);context.setTimeout=fn=>idle.push(fn);
     if(fault==='live-data')context.navigator={connection:{saveData:true}};
   }
-  let script=galaxy.replace("import('./solar.js?v=mobile-flight-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=space-realism-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');

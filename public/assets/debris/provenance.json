@@ -1,0 +1,13 @@
+{
+  "source": "Lunar_Crag.glb",
+  "generator": "TRELLIS.2",
+  "collection": "Percules unity-objects-batch-2",
+  "sha256": "f7e6271469bdbab970c7dfa3d766461dec2f3454ab4df62bc0e824b4da239d6c",
+  "sourceBytes": 23398348,
+  "sourceTriangles": 462566,
+  "triangles": 816,
+  "vertices": 397,
+  "normalizedError": 0.02458617277443409,
+  "tool": "meshoptimizer 1.1.1",
+  "changes": "Welded duplicate positions, simplified geometry, normalized size, baked original base color to vertices and reduced color saturation. No runtime decoder or new generation job."
+}

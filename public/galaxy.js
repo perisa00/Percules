@@ -236,7 +236,7 @@
     if(solar){ensureEffects();return Promise.resolve(solar);}
     if(!quiet){el('enter-solar').setAttribute('aria-busy','true');canvas.dataset.loading='true';}
     if(solarLoading)return solarLoading;
-    solarLoading=import('./solar.js?v=mobile-flight-1').then(module=>{
+    solarLoading=import('./solar.js?v=space-realism-1').then(module=>{
       solar=module.createSolar(solarCanvas,{coarse,deferWork:queueIdle,onInvalidate:wake,onProject:state=>{
         const phone=el('milica-phone');phone.hidden=!state;
         if(state){phone.style.left=state.x+'px';phone.style.top=state.y+'px';phone.style.setProperty('--phone-width',state.width+'px');phone.dataset.paused=String(state.paused);}
@@ -409,7 +409,7 @@
           if(-v.z<uNear)gl_PointSize=0.;
         }
         float shimmer=sin(uTime*.65+dot(aPosition,vec3(11.7,23.1,7.9)));
-        vColor=aColor;vStrength=aStrength*(uLocal>.5?smoothstep(.08,.5,1.-uZoom):1.)*(1.+shimmer*.16+uEnergy*.28);vSparkle=uBeacon>.5?0.:smoothstep(3.0,7.0,aSize);
+        vColor=aColor;vStrength=aStrength*(uLocal>.5?smoothstep(.08,.5,1.-uZoom):1.)*(1.+shimmer*.025+uEnergy*.28);vSparkle=uBeacon>.5?0.:smoothstep(3.0,7.0,aSize);
       }
     `, `
       precision mediump float;
@@ -461,8 +461,11 @@
         vec3 photo=texture2D(uTexture,uv).rgb;
         float photoEdge=1.0-smoothstep(7.5,8.45,r);
         photo=max(photo-vec3(0.004),vec3(0.0))*photoEdge;
-        // A small lift preserves dusty midtones without clipping the luminous core.
-        photo=pow(photo,vec3(0.93))*0.93;
+        // Preserve dark dust lanes and keep the bulge warm without washing it white.
+        photo=pow(photo,vec3(1.02));
+        float luminance=dot(photo,vec3(.2126,.7152,.0722));
+        photo=mix(photo,luminance*vec3(1.08,.98,.86),exp(-r*r*.48)*.24);
+        photo*=.93+.12*smoothstep(.05,.45,luminance);
         color=mix(color*edge,photo,uTextureMix);
         gl_FragColor=vec4(color*uLayerWeight*uDiskDetail,1.0);
       }
@@ -479,7 +482,7 @@
         float space=exp(-dot(p*vec2(0.65,0.95),p*vec2(0.65,0.95)));
         float core=exp(-dot(p*vec2(3.2,5.0),p*vec2(3.2,5.0)));
         vec3 haze=vec3(.008,.016,.041)*glow+vec3(.003,.004,.012)*space;
-        haze+=vec3(.085,.045,.018)*core*(.35+uEnergy*.8);
+        haze+=vec3(.052,.030,.014)*core*(.35+uEnergy*.8);
         vec2 band=vUv+vec2(sin(uYaw)*.45,(uPitch-.7)*.32);
         float lane=exp(-pow((band.y+band.x*.36)*3.2,2.));
         vec3 inside=vec3(.001,.002,.005)+vec3(.007,.009,.018)*lane;
@@ -541,9 +544,10 @@
           float n=volumeNoise(p*vec3(1.7,4.8,1.7)+32.);
           float grain=volumeNoise(p*vec3(6.,8.,6.)+11.);
           float density=luminance*4.2*edge*exp(-height*height)*(.22+1.8*smoothstep(.15,.8,n))*(.45+.55*grain);
-          float opacity=1.-exp(-density*stepSize*1.35);
+          float dust=smoothstep(.38,.82,grain)*smoothstep(.1,.38,r)*exp(-height*height*2.2)*edge*.18;
+          float opacity=1.-exp(-(density+dust)*stepSize*1.35);
           vec3 tint=clamp(photo/max(.018,luminance),vec3(0.),vec3(2.6));
-          vec3 emission=tint*vec3(.14,.16,.20)*(.85+n*.3);
+          vec3 emission=tint*vec3(.14,.16,.20)*(.85+n*.3)*density/max(.001,density+dust);
           light+=transmission*opacity*emission;transmission*=1.-opacity;
         }
         gl_FragColor=vec4(light*uFogStrength*uTextureMix,1.);
@@ -674,7 +678,7 @@
         vec3 color=mix(base,streak,.32*uEnergy);
         if(uTeleport>.001){vec3 warp=vec3(0.);for(int i=1;i<=5;i++){float t=float(i)/5.;vec2 uv=.5+(vUv-.5)*(1.-t*uTeleport*.48);warp+=texture2D(uScene,uv).rgb*(1.-t*.55);}color=mix(color,warp/3.35,.6*uTeleport);color+=vec3(.035,.07,.13)*uTeleport*exp(-length((vUv-.5)*vec2(uAspect,1.))*3.);}
 
-        color+=light*(.58+uEnergy*.62)*(1.-base*.6);
+        color+=light*(.46+uEnergy*.62)*(1.-base*.6);
         // A cool, short-lived light trail blooms over the warm stellar core.
         color+=max(streak-base*.65,vec3(0.))*vec3(.12,.23,.42)*uEnergy;
         float peak=max(color.r,max(color.g,color.b));
