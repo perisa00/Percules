@@ -32,6 +32,10 @@ vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,wor
 const {createSolar,worlds}=context.api;
 assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,4);
 const gymMeshes=vm.runInContext('createGymGeometry()',context);
+const smallGym=vm.runInContext('createGymGeometry({lowDetail:true})',context);
+const faces=list=>list.reduce((n,mesh)=>n+mesh.data.length/30,0);
+assert.ok(faces(smallGym)<faces(gymMeshes)*.3,'CPU fallback must contain less than 30% of the full triangle count');
+console.log('Gym triangles: full='+faces(gymMeshes)+', fallback='+faces(smallGym));
 assert.deepEqual(Array.from(gymMeshes.filter(mesh=>!mesh.motion),mesh=>mesh.id).sort(),['bench','cardio','earth','room','stretch','sun']);
 assert.equal(gymMeshes.filter(mesh=>mesh.motion==='belt').length,24,'Both treadmill belts need moving treads');
 assert.ok(gymMeshes.some(mesh=>mesh.part==='handL')&&gymMeshes.some(mesh=>mesh.part==='handR'),'The trainer needs articulated hands for each station');
@@ -113,7 +117,7 @@ console.log('Studio checks passed: eight separate galactic worlds, animated pink
 
 async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   let now=0,sequence=0;
-  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore;
+  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore;const imageEvents=[],unavailable=[];
   const corePromise=fault==='slow'||fault==='reject'?new Promise((resolve,reject)=>{resolveCore=resolve;rejectCore=reject;}):null;
   const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
   function node(id){
@@ -125,8 +129,8 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   const body={dataset:{}};
   const document={body,hidden:false,getElementById:node,createElement:()=>element(),
     addEventListener:(type,fn)=>{if(!events.has(type))events.set(type,[]);events.get(type).push(fn);},
-    dispatchEvent:event=>{if(event.type==='percules:scene')sceneEvents.push(event.detail);if(event.type==='percules:hover')hoverEvents.push(event.detail);for(const fn of events.get(event.type)||[])fn(event);}};
-  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,Image:function(){},corePromise,
+    dispatchEvent:event=>{if(event.type==='percules:unavailable')unavailable.push(event.detail);if(event.type==='percules:scene')sceneEvents.push(event.detail);if(event.type==='percules:hover')hoverEvents.push(event.detail);for(const fn of events.get(event.type)||[])fn(event);}};
+  const context={console,Math,Map,Set,Float32Array,Uint8Array,Uint16Array,Image:function(){imageEvents.push(this);},corePromise,
     window:{open:url=>externalLinks.push(url)},document,innerWidth:390,innerHeight:844,devicePixelRatio:1,
     matchMedia:query=>({matches:query.includes('reduced-motion')?reduced:coarse,addEventListener(){}}),
     performance:{now:()=>now},CustomEvent:function(type,options){this.type=type;this.detail=options?.detail;},
@@ -134,9 +138,9 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=3d-studio-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
-    .replace("import('./shield.js?v=19')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
-    .replace("import('./jump.js?v=17')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
+  let script=galaxy.replace("import('./solar.js?v=routes-recovery-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+    .replace("import('./shield.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
+    .replace("import('./jump.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
   vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
   const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,8);
@@ -148,6 +152,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     if(fault==='context'){
       node('galaxy').listeners.webglcontextlost({preventDefault(){}});tick(2);
       assert.equal(node('galaxy').dataset.renderer,'canvas');assert.equal(node('galaxy-fallback').hidden,false);
+      assert.doesNotThrow(()=>imageEvents[0]?.onload(),'A late galaxy texture must be ignored after switching to Canvas');
     }
     navigate('apps');tick(150);
     if(corePromise){
@@ -157,14 +162,14 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     await flush();tick(100);
     assert.equal(node('galaxy').dataset.loading,'false');
     if(fault==='reject'){
-      assert.equal(body.dataset.scene,'galaxy');assert.equal(node('render-error').hidden,false);
+      assert.equal(body.dataset.scene,'galaxy');assert.equal(node('render-error').hidden,false);assert.equal(unavailable.at(-1).world,'apps','Failure must retain the exact requested star');
       assert.ok(events.has('percules:navigate'),'Navigation remains available for retry');
     }else{
       assert.equal(body.dataset.scene,'system');assert.equal(body.dataset.world,'apps','Core world loads even when optional effects never respond');
     }
     if(fault==='context'){
       node('galaxy').listeners.webglcontextrestored();tick(2);assert.equal(node('galaxy').dataset.renderer,'webgl');
-      assert.equal(node('galaxy-fallback').hidden,true);
+      assert.equal(node('galaxy-fallback').hidden,true);assert.doesNotThrow(()=>imageEvents[0]?.onload(),'A previous generation image must stay ignored after restoration');
     }
     return;
   }
@@ -362,3 +367,4 @@ assert.equal(result.status,0,'Shader '+index+' failed:\n'+result.stdout+'\n'+res
 console.log('Validated '+shaderPairs.length+' WebGL shader pairs.');
 }
 }
+

@@ -195,7 +195,7 @@ function createCoin(canvas) {
   canvas.addEventListener('webglcontextrestored',()=>{lost=false;load();});
   let outline;
   async function load(){try{
-    if(!outline){const response=await fetch('assets/brand/percules-outline.json');if(!response.ok)throw new Error('Emblem outline unavailable');outline=await response.json();}
+    if(!outline){const response=await fetch('/assets/brand/percules-outline.json');if(!response.ok)throw new Error('Emblem outline unavailable');outline=await response.json();}
     init();
   }catch(error){host.dataset.coinState='fallback';console.warn('Percules emblem:',error.message);}}
   document.getElementById('logo-backdrop')?.addEventListener('click',event=>{
@@ -205,3 +205,4 @@ function createCoin(canvas) {
   if(fallback.complete&&fallback.naturalWidth)load();else fallback.addEventListener('load',load,{once:true});
 }
 document.querySelectorAll('[data-coin] canvas').forEach(createCoin);
+

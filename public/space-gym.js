@@ -1,6 +1,6 @@
 import {workoutFrame,workoutTransform,transformGymPoint} from './gym-workout.js?v=3';
 // Static buffers plus joint transforms, shared by WebGL and Canvas.
-export function createGymGeometry() {
+export function createGymGeometry({lowDetail=false}={}) {
   const meshes = new Map();
   const motions = new Map();
   const rose = [0.86, 0.19, 0.46], blush = [1, 0.54, 0.74];
@@ -20,6 +20,7 @@ export function createGymGeometry() {
     face([[a,c,f],[a,c,g],[a,e,g],[a,e,f]], [-1,0,0], color, glow);
   }
   function tube(start, end, radius, color, glow = 0, segments = 12) {
+    if(lowDetail)segments=Math.min(segments,4);
     const axis = end.map((v,i)=>v-start[i]), length = Math.hypot(...axis);
     const n = axis.map(v=>v/length), ref = Math.abs(n[1])>.9 ? [1,0,0] : [0,1,0];
     const cross = (a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -36,8 +37,9 @@ export function createGymGeometry() {
   }
   function ellipsoid(x,y,z,rx,ry,rz,color) {
     const point=(a,b)=>[x+rx*Math.sin(b)*Math.cos(a),y+ry*Math.cos(b),z+rz*Math.sin(b)*Math.sin(a)];
-    for(let j=0;j<10;j++)for(let i=0;i<16;i++){
-      const a=i/16*Math.PI*2,c=(i+1)/16*Math.PI*2,b=j/10*Math.PI,d=(j+1)/10*Math.PI;
+    const lat=lowDetail?3:10,lon=lowDetail?5:16;
+    for(let j=0;j<lat;j++)for(let i=0;i<lon;i++){
+      const a=i/lon*Math.PI*2,c=(i+1)/lon*Math.PI*2,b=j/lat*Math.PI,d=(j+1)/lat*Math.PI;
       const points=[point(a,b),point(c,b),point(c,d),point(a,d)],normals=points.map(p=>{const n=[(p[0]-x)/(rx*rx),(p[1]-y)/(ry*ry),(p[2]-z)/(rz*rz)],length=Math.hypot(...n);return n.map(v=>v/length);});
       face(points,normals,color);
     }
@@ -52,7 +54,8 @@ export function createGymGeometry() {
   // Floating deck, luminous tile seams and a rose undercarriage.
   box(0,-.52,0,12.4,.5,9.5,dark);
   box(0,-.21,0,12,.15,9.2,rose);
-  for(let x=-5.5;x<=5.5;x++)for(let z=-4;z<=4;z++)box(x,-.035,z,.975,.07,.975,blush);
+  if(lowDetail)box(0,-.035,0,11.9,.07,8.9,blush);
+  else for(let x=-5.5;x<=5.5;x++)for(let z=-4;z<=4;z++)box(x,-.035,z,.975,.07,.975,blush);
   for(const x of [-6,6])box(x,0,0,.065,.07,9.2,neon,1);
   for(const z of [-4.6,4.6])box(0,0,z,12,.07,.065,neon,1);
   box(0,-.57,4.76,11.7,.06,.04,pale,1);
@@ -137,7 +140,7 @@ export function createGymGeometry() {
   }
 
   // Separate smooth body segments follow the shared inverse-kinematics rig.
-  for(let side=0;side<2;side++)for(let ring=0;ring<2;ring++){
+  for(let side=0;side<2;side++)for(let ring=0;ring<(lowDetail?1:2);ring++){
     group='foot-shadow-'+side+'-'+ring;motions.set(group,{motion:'shadow',side,opacity:ring?.12:.07});
     const r=ring?.20:.31;
     for(let i=0;i<24;i++){const a=i*Math.PI/12,b=(i+1)*Math.PI/12;face([[0,0,0],[Math.cos(b)*r,0,Math.sin(b)*r*1.35],[Math.cos(a)*r,0,Math.sin(a)*r*1.35],[0,0,0]],[0,1,0],dark,1);}
@@ -213,3 +216,4 @@ export function drawGymFallback(ctx, meshes, project, focusId,time=0,frame=worko
   for(const t of triangles){ctx.globalAlpha=t.alpha;ctx.fillStyle=`rgb(${t.color.join(',')})`;ctx.beginPath();ctx.moveTo(t.points[0].x,t.points[0].y);ctx.lineTo(t.points[1].x,t.points[1].y);ctx.lineTo(t.points[2].x,t.points[2].y);ctx.closePath();ctx.fill();}
   ctx.globalAlpha=1;
 }
+

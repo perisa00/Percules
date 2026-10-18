@@ -1,7 +1,7 @@
 // Extracted from the approved 2-second holographic-wave.html prototype.
 // The wave, liquid tiles, optics and timing are preserved; black becomes transparency.
 export const SHIELD_DURATION=1.65;
-export function createShield(canvas){
+export function createShield(canvas,options={}){
   const gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,stencil:false,premultipliedAlpha:true,powerPreference:'low-power'});
   if(!gl)return {render(){}};
   const vertex=`attribute vec2 a_position;void main(){gl_Position=vec4(a_position,0.,1.);}`;
@@ -131,6 +131,8 @@ void main(){
     if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));
     return shader;
   }
+  let lost=false,renderer;
+  function build(){
   const program=gl.createProgram(),vs=compile(gl.VERTEX_SHADER,vertex),fs=compile(gl.FRAGMENT_SHADER,fragment);
   gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
@@ -138,9 +140,9 @@ void main(){
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
   const position=gl.getAttribLocation(program,'a_position');
   const time=gl.getUniformLocation(program,'u_time'),size=gl.getUniformLocation(program,'u_size'),reduce=gl.getUniformLocation(program,'u_reduce');
-  let visible=false,lost=false;
+  let visible=false;
   canvas.dataset.source='holographic-wave';canvas.dataset.material='separating-water-triangles';canvas.dataset.duration=String(SHIELD_DURATION);
-  canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();lost=true;visible=false;canvas.style.opacity='0';});
+
   return {render(age,width,height,dpr){
     if(lost)return;
     if(age<0||age>=SHIELD_DURATION){if(visible){gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);canvas.style.opacity='0';visible=false;}return;}
@@ -155,4 +157,14 @@ void main(){
     gl.uniform1f(time,shaderTime);gl.uniform2f(size,w,h);gl.uniform1f(reduce,0);gl.drawArrays(gl.TRIANGLES,0,6);
     canvas.style.opacity='1';visible=true;
   }};
+  }
+  renderer=build();
+  canvas.addEventListener('webglcontextlost',event=>{
+    event.preventDefault();lost=true;canvas.style.opacity='0';options.onInvalidate?.();
+  });
+  canvas.addEventListener('webglcontextrestored',()=>{
+    try{renderer=build();lost=false;options.onInvalidate?.();}
+    catch(error){lost=true;canvas.style.opacity='0';console.warn('Travel renderer recovery failed:',error);}
+  });
+  return {render(...args){if(lost)return;renderer.render(...args);}};
 }

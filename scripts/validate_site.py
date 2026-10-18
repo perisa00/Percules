@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+from build_pages import route_definitions, verify_pages
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +24,8 @@ REQUIRED_FILES = ('public/index.html', 'public/404.html', 'public/coin.html', 'p
 
 CANONICAL_URLS = {'index.html': 'https://percules.rs/', 'coin.html': 'https://percules.rs/coin.html', '404.html': 'https://percules.rs/404.html'}
 
-EXPECTED_SITEMAP_URLS = {"https://percules.rs/"}
+CANONICAL_URLS.update({d["path"].strip("/")+"/index.html":"https://percules.rs"+d["path"] for d in route_definitions().values()})
+EXPECTED_SITEMAP_URLS = {"https://percules.rs/"} | {"https://percules.rs"+d["path"] for d in route_definitions().values()}
 
 TEXT_SUFFIXES = {
     ".html", ".css", ".js", ".svg", ".txt", ".xml", ".webmanifest", ""
@@ -186,7 +188,7 @@ def parse_html_pages(problems: list[str]) -> dict[Path, SiteHTMLParser]:
             problems.append(f"{label}: nedostaje meta description")
         if not parser.canonical:
             problems.append(f"{label}: nedostaje canonical")
-        elif parser.canonical != CANONICAL_URLS.get(path.name):
+        elif parser.canonical != CANONICAL_URLS.get(path.relative_to(PUBLIC).as_posix()):
             problems.append(f"{label}: canonical nije očekivani URL ({parser.canonical})")
         if parser.h1_count != 1:
             problems.append(f"{label}: očekivan je tačno jedan H1, pronađeno {parser.h1_count}")
@@ -344,6 +346,7 @@ def validate_runtime_resources(problems: list[str]) -> None:
 
 def main() -> int:
     problems: list[str] = []
+    problems.extend("Stale destination page: "+name for name in verify_pages())
     validate_required_files(problems)
     validate_public_text(problems)
     parsed_pages = parse_html_pages(problems)
@@ -365,3 +368,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

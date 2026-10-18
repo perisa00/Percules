@@ -108,11 +108,13 @@ void main(){
  gl_FragColor=vec4(color*u_visibility,0.);
 }`;
 
-export function createJump(canvas){
+export function createJump(canvas,options={}){
  const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
  if(!gl)return {render(){canvas.style.opacity='0';}};
  function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
  function program(v,f){const p=gl.createProgram(),vs=compile(gl.VERTEX_SHADER,v),fs=compile(gl.FRAGMENT_SHADER,f);gl.attachShader(p,vs);gl.attachShader(p,fs);gl.linkProgram(p);gl.deleteShader(vs);gl.deleteShader(fs);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));return p;}
+  let lost=false,renderer;
+  function build(){
  const bg=program(backgroundVertex,backgroundFragment),stars=program(starVertex,starFragment);
  const bgBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bgBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
  let seed=23457;
@@ -129,10 +131,9 @@ export function createJump(canvas){
  const starAttribs=[['a_star',3,0],['a_meta',3,12],['a_corner',2,24]].map(([name,size,offset])=>({location:gl.getAttribLocation(stars,name),size,offset}));
  const uniforms=p=>Object.fromEntries(['u_size','u_time','u_warp','u_travel','u_speed','u_pixelScale','u_progress','u_goal','u_visibility'].map(name=>[name,gl.getUniformLocation(p,name)]));
  const bu=uniforms(bg),su=uniforms(stars);
- let visible=false,lost=false,pixelScale=1;
+ let visible=false,pixelScale=1;
  canvas.dataset.source='milky-way-jump';canvas.dataset.duration=String(JUMP_DURATION);
- canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();lost=true;canvas.style.opacity='0';});
- canvas.addEventListener('webglcontextrestored',()=>{lost=true;});
+
  function setUniforms(u,p,warp,goal,arrival){
   const exiting=arrival>=0,decay=exiting?Math.exp(-arrival*4):0;
   gl.uniform2f(u.u_size,canvas.width,canvas.height);gl.uniform1f(u.u_time,p*6.2);gl.uniform1f(u.u_warp,warp);
@@ -159,4 +160,14 @@ export function createJump(canvas){
   for(const a of starAttribs){gl.enableVertexAttribArray(a.location);gl.vertexAttribPointer(a.location,a.size,gl.FLOAT,false,32,a.offset);}
   setUniforms(su,p,warp,goal,arrival);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.drawArrays(gl.TRIANGLES,0,starData.length/8);gl.disable(gl.BLEND);
  }};
+  }
+  renderer=build();
+  canvas.addEventListener('webglcontextlost',event=>{
+    event.preventDefault();lost=true;canvas.style.opacity='0';options.onInvalidate?.();
+  });
+  canvas.addEventListener('webglcontextrestored',()=>{
+    try{renderer=build();lost=false;options.onInvalidate?.();}
+    catch(error){lost=true;canvas.style.opacity='0';console.warn('Travel renderer recovery failed:',error);}
+  });
+  return {render(...args){if(lost)return;renderer.render(...args);}};
 }

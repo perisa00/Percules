@@ -302,3 +302,18 @@ body[data-detail="open"] .loading-scene{display:none!important}
 
 .galaxy-destination[data-world="generator"]{--destination-color:#3be6bf}
 body[data-world="generator"]{--accent:#72efd5;--line:#72efd52c}
+
+
+/* Real destination pages share the scene, controls and colored navigation. */
+a.brand,a.galaxy-destination,a.journey-button,a.text-button{text-decoration:none;color:inherit;cursor:pointer}
+.topbar a,.scene-caption a{pointer-events:auto}
+.studio-menu nav a{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:14px 0;background:transparent;border-bottom:1px solid var(--line);text-align:left;color:inherit;font-size:14px;text-decoration:none}
+.studio-menu nav a>span{font-size:9px;color:var(--muted);margin-right:12px}
+.studio-menu nav a>b{margin-left:auto;font-weight:400;color:var(--accent)}
+.studio-menu nav a:hover{color:var(--accent)}
+a.panel-cta{text-decoration:none}
+body[data-entry-loading="true"] :is(canvas,#galaxy-destinations,#planet-labels,#planet-nav,.view-controls){visibility:hidden}
+body[data-entry-loading="true"] .loading-scene{display:flex}
+@view-transition{navigation:auto}
+@media(prefers-reduced-motion:reduce){::view-transition-group(*){animation:none}}
+body[data-theme="pink"] .studio-menu nav a{color:#fbe5ef}
