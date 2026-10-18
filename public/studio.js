@@ -37,6 +37,9 @@ function travel(element){
   requested={world,id};
   dispatch('percules:navigate',requested);
 }
+function openLinkedWorld(){if(location.hash==='#generator')travel({dataset:{world:'generator'}});}
+window.addEventListener('hashchange',openLinkedWorld);
+window.addEventListener('load',openLinkedWorld,{once:true});
 toggle.addEventListener('click',()=>menuOpen(menu.hidden));
 document.querySelectorAll('[data-destination], [data-world]').forEach(button=>button.addEventListener('click',()=>travel(button)));
 const emblem=byId('studio-emblem'),coarse=matchMedia('(pointer: coarse)').matches;

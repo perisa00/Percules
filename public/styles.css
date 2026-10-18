@@ -299,3 +299,6 @@ body[data-detail="open"] .loading-scene{display:none!important}
 @media(max-width:800px){body[data-scene="system"] .scene-caption h1{font-size:24px;max-width:280px}#project-story{font-size:11px;padding:9px 0;margin:0}.phone-shell{border-radius:16px}.phone-screen-copy{padding:10px 7px}.phone-screen-copy small{font-size:5px;letter-spacing:.7px;left:7px;top:21px}.phone-screen-copy strong{font-size:13px}.phone-screen-copy>span{font-size:7px;margin-top:6px;padding-top:6px}.phone-caption{font-size:5px;letter-spacing:1px;margin-top:12px}.loading-scene{flex-wrap:wrap;justify-content:center;width:300px;bottom:180px}#planet-nav button{font-size:11px;padding:10px 13px}.case-portrait{height:180px}}
 @media(max-height:550px){.project-phone{width:82px}.phone-caption{display:none}.phone-screen-copy strong{font-size:12px}#project-story{padding:7px 0}.loading-scene{bottom:80px}}
 @media(prefers-reduced-motion:reduce){.phone-rig,.fairy-wing,.fairy-sparkles{animation:none}.fairy-wing-right{transform:scaleX(-1)}.phone-backdrop{transition:none}}
+
+.galaxy-destination[data-world="generator"]{--destination-color:#3be6bf}
+body[data-world="generator"]{--accent:#72efd5;--line:#72efd52c}

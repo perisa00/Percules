@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const source=['gym-workout.js','space-gym.js','solar.js'].map(file=>fs.readFileSync('public/'+file,'utf8').replace(/^import .*;\r?\n/gm,'')).join('\n');
+const source=['gym-workout.js','space-gym.js','space-studio.js','solar.js'].map(file=>fs.readFileSync('public/'+file,'utf8').replace(/^import .*;\r?\n/gm,'')).join('\n');
 const shaderPairs=[],draws=[],uploads=[],gymUniforms=[],viewUniforms=new Map();
 let currentSources=[],id=0;
 const gl=new Proxy({
@@ -30,7 +30,7 @@ Image:function(){throw Error('Procedural studio must not download planetary imag
 vm.createContext(context);
 vm.runInContext(source.replace(/export /g,'')+'\nglobalThis.api={createSolar,worlds,bodies};',context);
 const {createSolar,worlds}=context.api;
-assert.equal(Object.keys(worlds).length,7);assert.equal(worlds.milica.length,4);
+assert.equal(Object.keys(worlds).length,8);assert.equal(worlds.milica.length,4);
 const gymMeshes=vm.runInContext('createGymGeometry()',context);
 assert.deepEqual(Array.from(gymMeshes.filter(mesh=>!mesh.motion),mesh=>mesh.id).sort(),['bench','cardio','earth','room','stretch','sun']);
 assert.equal(gymMeshes.filter(mesh=>mesh.motion==='belt').length,24,'Both treadmill belts need moving treads');
@@ -79,7 +79,7 @@ solar.stepWorkout(-1);gymFrame(false);assert.equal(canvas.dataset.exercise,'curl
 solar.hover('sun');assert.equal(previews.at(-1),null,'No hover panels should cover the gym');
 solar.activate('cardio',true);assert.equal(solar.focusId(),'cardio','Gym controls should work with one tap');
 solar.zoom(2500);assert.equal(solar.isFocused(),false);
-for(const region of ['studio','websites','apps','support','process','contact']){
+for(const region of ['studio','websites','apps','support','process','contact','generator']){
 solar.setWorld(region);assert.equal(labels.children.length,worlds[region].length);solar.select(worlds[region][1].id);
 solar.camera({dt:.016,target:[0,0,0],distance:80,reducedMotion:true});
 solar.render({dt:.016,yaw:-.65,pitch:.32,progress:1,reducedMotion:false,viewPrepared:true});
@@ -109,7 +109,7 @@ solar.clearFocus();solar.zoom(-3000);assert.equal(solar.isFocused(),false,'Overv
 assert.equal(worlds.projects,undefined,'The old project planets must be removed');
 solar.setWorld('milica');solar.activate('earth');assert.equal(externalLinks.at(-1),'https://www.milicapersonaltrainer.com/');
 assert.equal(solar.isFocused(),false);
-console.log('Studio checks passed: seven separate galactic worlds, animated pink gym, mobile camera at 30/60/120 FPS, rendering, content and contact.');
+console.log('Studio checks passed: eight separate galactic worlds, animated pink gym, mobile camera at 30/60/120 FPS, rendering, content and contact.');
 
 async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   let now=0,sequence=0;
@@ -134,12 +134,12 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
-  let script=galaxy.replace("import('./solar.js?v=studio-refresh-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=3d-studio-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=19')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=17')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
   vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
-  const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,7);
+  const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,8);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
@@ -195,10 +195,10 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   if(useWebGL){
     node('galaxy').listeners.keydown({key:' ',preventDefault(){}});
     const index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites'),base=index*16;
-    tick(45);const lit=uploads.filter(data=>data.length===112).at(-1);
+    tick(45);const lit=uploads.filter(data=>data.length===Object.values(context.PerculesDestinations).filter(d=>d.marker).length*16).at(-1);
     assert.ok(lit,'Destination lights must reach the galaxy GPU buffer');
     assert.ok(lit[base+7]>6.5,'Hover should smoothly brighten the actual rendered star');
-    for(let star=0;star<7;star++){
+    for(let star=0;star<Object.values(context.PerculesDestinations).filter(d=>d.marker).length;star++){
       assert.ok(lit[star*16+6]>=12,'Every destination must have a visible resting core');
       assert.ok(lit[star*16+7]>=3.39,'Resting stars must emit light without hover');
       assert.ok(lit[star*16+14]>=36&&lit[star*16+15]>=.3999,'Every destination must keep a soft colored halo at rest');
@@ -208,7 +208,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   assert.equal(node('star-contact').dataset.active,'false','Highlight the matching star only');
   assert.equal(body.dataset.scene,'galaxy','Hover must not begin navigation');
   websiteLabel.listeners.pointerleave();assert.equal(websiteStar.dataset.active,'false','Clear star after leaving the label');
-  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===112).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-3.4)<.002,'Rendered light must settle after leaving, including with breathing paused');}
+  if(useWebGL){tick(45);const rest=uploads.filter(data=>data.length===Object.values(context.PerculesDestinations).filter(d=>d.marker).length*16).at(-1),index=Object.values(context.PerculesDestinations).filter(d=>d.marker).findIndex(d=>d.marker==='destination-websites');assert.ok(Math.abs(rest[index*16+7]-3.4)<.002,'Rendered light must settle after leaving, including with breathing paused');}
   websiteLabel.listeners.focus();assert.equal(websiteStar.dataset.active,'true','Keyboard focus should light the same star');
   websiteLabel.listeners.blur();assert.equal(websiteStar.dataset.active,'false');
   assert.equal(websiteLabel.style.transform,undefined,'Camera rendering must not move the fixed labels');
