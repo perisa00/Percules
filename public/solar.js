@@ -1,5 +1,6 @@
 import {createGymGeometry, drawGymFallback, gymPose} from './space-gym.js?v=5';
 import {workoutFrame,workoutStations,WORKOUT_SLOT} from './gym-workout.js?v=3';
+import {createStudioGeometry} from './space-studio.js?v=1';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const mix = (a,b,t) => a+(b-a)*t;
@@ -521,6 +522,12 @@ export const worlds={
       "style": 6
     }
   ],
+  "generator": [
+    {id:'generator',name:'Percules 3D studio',kind:'Radionica u svemiru',radius:2.1,position:[0,2.8,-4],color:[.3,.9,.8],content:'generator',headline:'Od slike do treće dimenzije.',text:'Upoznaj tok rada u 3D studiju i status pristupa generatoru.'},
+    {id:'studio-input',name:'Ulazna slika',kind:'01 · Priprema',radius:1.8,position:[-4,1.8,-.6],color:[.3,.9,.8],content:'generator',headline:'Sve počinje jednom slikom.',text:'Izaberi jasnu sliku jednog objekta. AI put zahteva providnu pozadinu.'},
+    {id:'studio-model',name:'3D model',kind:'02 · Generisanje',radius:1.8,position:[0,1.7,0],color:[.3,.9,.8],content:'generator',headline:'Prostor za tvoj sledeći model.',text:'Ova svetleća skulptura predstavlja radionicu. Novi AI modeli nastaju u zasebnom GPU servisu.'},
+    {id:'studio-export',name:'Modeli i preuzimanje',kind:'03 · Rezultat',radius:1.8,position:[4,1.8,-1],color:[.3,.9,.8],content:'generator',headline:'Pregledaj. Preuzmi. Nastavi da stvaraš.',text:'Studio je pripremljen za GLB pregled i ZIP sa modelom, slikama i podešavanjima.'}
+  ],
   "milica": [
   {id:'sun',name:'Zona snage',kind:'Roze teretana · tegovi',radius:2,position:[-3.6,1,-1.4],color:[1,.35,.65],content:'milica',headline:'Upoznati osobu iza ideje.',text:'Milica je personalni trener za žene. Njen rad počiva na pažnji, podršci i planu prilagođenom svakoj klijentkinji.'},
   {id:'earth',name:'Miličina aplikacija',kind:'Projekat · lični trener',radius:1.8,position:[.35,3.05,-4.1],color:[1,.65,.8],content:'milica',href:'https://www.milicapersonaltrainer.com/',headline:'Miličin svet. Tvoj ritam.',text:'Otvori www.milicapersonaltrainer.com u novom tabu.'},
@@ -528,7 +535,7 @@ export const worlds={
   {id:'stretch',name:'Zona istezanja',kind:'Roze teretana · ravnoteža',radius:1.7,position:[.2,.1,2.6],color:[1,.65,.8],content:'milica',headline:'Projekat kome se vraćamo.',text:'Slušamo povratne informacije, proveravamo prikaz i doterujemo detalje. Posvećenost se vidi i u malim ispravkama.'}
   ]
 };
-Object.entries(worlds).forEach(([id,list])=>{if(id!=='milica')list.forEach(b=>b.position=[Math.cos(b.angle)*b.orbit,0,Math.sin(b.angle)*b.orbit]);});
+Object.entries(worlds).forEach(([id,list])=>{if(id!=='milica'&&id!=='generator')list.forEach(b=>b.position=[Math.cos(b.angle)*b.orbit,0,Math.sin(b.angle)*b.orbit]);});
 export const bodies=worlds.studio;
 
 export function createSolar(canvas, options={}) {
@@ -547,6 +554,14 @@ export function createSolar(canvas, options={}) {
   let width=1,height=1,dpr=1,time=0,distance=180,focus=null,focusZoom=1,center=[0,0,0],lost=false,framing=0,focusMix=0,roll=0,viewInitialized=false;
   let world='studio',bodies=worlds.studio,overviewZoom=1,hovered=null,hoverPoint=null,forcedHover=null,lastYaw=0,lastPitch=0,lastProgress=0,previewedTouchId=null;
   let resources,images=new Map(),highRequested=new Set(),earthExtras=false;
+  let studioGeometry=null;
+  function prepareStudio(){
+    if(!studioGeometry)studioGeometry=createStudioGeometry();
+    if(gl&&resources&&!resources.studioBuffers.length)resources.studioBuffers=studioGeometry.map(mesh=>{
+      const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,mesh.data,gl.STATIC_DRAW);
+      return {...mesh,buffer,count:mesh.data.length/10};
+    });
+  }
   let gymGeometry=null;
   function prepareGym(){
     if(!gymGeometry)gymGeometry=createGymGeometry();
@@ -581,6 +596,7 @@ export function createSolar(canvas, options={}) {
   function setWorld(id){
     if(!worlds[id]||id===world)return false;
     world=id;bodies=worlds[id];focus=null;focusZoom=1;overviewZoom=1;clearHover();focusMix=0;viewInitialized=false;framing=0;
+    if(id==='generator')prepareStudio();
     if(id==='milica'){prepareGym();gymTime=3;workoutKey='';updateWorkout();}
     canvas.dataset.world=id;canvas.dataset.focus='system';labels();options.onSelect?.(null);options.onInvalidate?.();return true;
   }
@@ -707,8 +723,8 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     const sphereBuffer=buffer(new Float32Array(sphere)),indexBuffer=buffer(new Uint16Array(indices),gl.ELEMENT_ARRAY_BUFFER);
     const ringMesh=[];for(let i=0;i<160;i++){const a=i/160*TAU,b=(i+1)/160*TAU;for(const [t,r] of [[a,1.24],[b,1.24],[a,2.48],[a,2.48],[b,1.24],[b,2.48]])ringMesh.push(Math.cos(t)*r,0,Math.sin(t)*r);}
     const ringBuffer=buffer(new Float32Array(ringMesh)),quad=buffer(new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]));
-    const orbitBuffers=new Map(Object.entries(worlds).map(([id,list])=>[id,id==='milica'?[]:list.slice(1).map(b=>{const pts=[];for(let i=0;i<=192;i++){const a=i/192*TAU;pts.push(Math.cos(a)*b.orbit,0,Math.sin(a)*b.orbit);}return buffer(new Float32Array(pts));})]));
-    const gymBuffers=[];
+    const orbitBuffers=new Map(Object.entries(worlds).map(([id,list])=>[id,(id==='milica'||id==='generator')?[]:list.slice(1).map(b=>{const pts=[];for(let i=0;i<=192;i++){const a=i/192*TAU;pts.push(Math.cos(a)*b.orbit,0,Math.sin(a)*b.orbit);}return buffer(new Float32Array(pts));})]));
+    const gymBuffers=[],studioBuffers=[];
     const textures=new Map();
     for(const id of [...new Set(Object.values(worlds).flat().map(b=>b.id)),'earth-night','earth-clouds']){
       const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
@@ -720,9 +736,10 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
       u.uModel=gl.getUniformLocation(p,'uModel');
       u.position=gl.getAttribLocation(p,'aPosition');u.uv=gl.getAttribLocation(p,'aUv');u.normal=gl.getAttribLocation(p,'aNormal');u.color=gl.getAttribLocation(p,'aColor');u.glow=gl.getAttribLocation(p,'aGlow');locations.set(p,u);
     }
-    resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers,gymBuffers};
+    resources={programs,locations,textures,sphereBuffer,indexBuffer,indexCount:indices.length,ringBuffer,ringCount:ringMesh.length/3,quad,orbitBuffers,gymBuffers,studioBuffers};
     for(const [key,image] of images)if(image.complete&&image.naturalWidth)upload(key.replace('-low',''),image,!key.endsWith('-low'));
     if(world==='milica')prepareGym();
+    if(world==='generator')prepareStudio();
     canvas.dataset.renderer='webgl';fallbackCanvas.hidden=true;canvas.style.opacity='1';
   }
   function size(w,h,pixelRatio){width=w;height=h;dpr=Math.min(pixelRatio,gl?1.6:1);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);if(gl)gl.viewport(0,0,canvas.width,canvas.height);else{fallbackCanvas.width=canvas.width;fallbackCanvas.height=canvas.height;}}
@@ -764,12 +781,12 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
     let u;
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-    if(world==='milica'){
-      const fade=clamp((progress-.75)/.25,0,1);
+    if(world==='milica'||world==='generator'){
+      const fade=world==='generator'?0:clamp((progress-.75)/.25,0,1);
       if(fade>0){u=use(p.pinkSky);gl.uniform1f(u.uOpacity,fade);gl.uniform2f(u.uResolution,width,height);gl.bindBuffer(gl.ARRAY_BUFFER,resources.quad);attributes(u.position);gl.vertexAttribPointer(u.position,2,gl.FLOAT,false,0,0);gl.drawArrays(gl.TRIANGLES,0,6);}
       gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);
       u=use(p.gym);
-      for(const mesh of resources.gymBuffers){
+      for(const mesh of world==='generator'?resources.studioBuffers:resources.gymBuffers){
         // Keep the architecture visible while a selected station is explored.
         const pose=gymPose(mesh,gymTime,gymState);
         gl.uniform1f(u.uOpacity,(focus&&pose.zone!==focus.id?1-focusMix*.65:1)*(pose.opacity??1));
@@ -819,6 +836,9 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   }
   function renderFallback(yaw,pitch){
     const ctx=fallbackContext;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    if(world==='generator'){
+      drawGymFallback(ctx,studioGeometry,p=>project(p,yaw,pitch),focus?.id);updateLabels(yaw,pitch,lastProgress);return;
+    }
     if(world==='milica'){
       if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
       const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';

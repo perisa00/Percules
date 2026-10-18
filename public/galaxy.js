@@ -83,7 +83,7 @@
     pointedWorld=pickGalaxy(x,y);canvas.style.cursor=pointedWorld?'pointer':'';updateBeaconLight();
   }
   const beaconLevels=new Float32Array(galaxyMarkers.length),beaconData=new Float32Array(galaxyMarkers.length*16);
-  const beaconPalette={studio:[.824,.894,1],websites:[.502,.706,1],apps:[.490,.949,.835],support:[.824,.855,.918],process:[.729,.698,1],projects:[.906,.643,1],contact:[1,.820,.557]};
+  const beaconPalette={studio:[.824,.894,1],websites:[.502,.706,1],apps:[.490,.949,.835],support:[.824,.855,.918],process:[.729,.698,1],projects:[.906,.643,1],contact:[1,.820,.557],generator:[.23,.9,.75]};
   let beaconFading=false;
   function updateStellarBeacons(dt){
     beaconFading=false;
@@ -159,8 +159,8 @@
     el('location').textContent=planet?focusedBody.name.toLocaleUpperCase('sr-Latn'):system?destinations[world].name.toLocaleUpperCase('sr-Latn'):galaxy?'MLEČNI PUT':'PUTOVANJE';
     el('location-index').textContent=galaxy?'01 / 03':planet?'03 / 03':'02 / 03';
     el('scene-eyebrow').textContent=planet?focusedBody.kind.toLocaleUpperCase('sr-Latn'):system?(pink?'PROJEKAT · MILICA PERSONAL TRAINER':'PERCULES · '+destinations[world].name.toLocaleUpperCase('sr-Latn')):'PERCULES DIGITAL STUDIO';
-    el('scene-title').textContent=planet?focusedBody.name:system?(pink?'Njen ritam. Naša pažnja.':world==='studio'?'Ideje pokreću. Detalji ostaju.':destinations[world].name):'Tvoja ideja. Naša puna pažnja.';
-    el('scene-description').textContent=planet?focusedBody.text:system?(pink?'Upoznaj Milicu kroz telefon ili istraži njenu roze teretanu.':world==='studio'?'Slušamo, stvaramo i doterujemo. Zajedno sa tobom.':'Iza svakog detalja stoji dobra ideja. Istraži kako je pretvaramo u iskustvo.'):'Upoznaj ljude, ideje i pažnju iza naših sajtova i aplikacija.';
+    el('scene-title').textContent=planet?focusedBody.name:system?(world==='generator'?'Od slike do treće dimenzije.':pink?'Njen ritam. Naša pažnja.':world==='studio'?'Ideje pokreću. Detalji ostaju.':destinations[world].name):'Tvoja ideja. Naša puna pažnja.';
+    el('scene-description').textContent=planet?focusedBody.text:system?(world==='generator'?'Istraži radionicu: ulazna slika, model i polica rezultata.':pink?'Upoznaj Milicu kroz telefon ili istraži njenu roze teretanu.':world==='studio'?'Slušamo, stvaramo i doterujemo. Zajedno sa tobom.':'Iza svakog detalja stoji dobra ideja. Istraži kako je pretvaramo u iskustvo.'):'Upoznaj ljude, ideje i pažnju iza naših sajtova i aplikacija.';
     el('enter-solar').hidden=!galaxy;el('back-system').hidden=!planet;el('back-galaxy').hidden=galaxy||scene==='travel';
     el('back-system').textContent=pink?'← Cela teretana':'← Ceo sistem';
     el('back-studio').hidden=true;
@@ -207,7 +207,7 @@
     if(solarLoading)return solarLoading;
     el('enter-solar').setAttribute('aria-busy','true');
     canvas.dataset.loading='true';
-    solarLoading=import('./solar.js?v=studio-refresh-1').then(module=>{
+    solarLoading=import('./solar.js?v=3d-studio-1').then(module=>{
       solar=module.createSolar(solarCanvas,{coarse,onInvalidate:wake,onProject:state=>{
         const phone=el('milica-phone');phone.hidden=!state;
         if(state){phone.style.left=state.x+'px';phone.style.top=state.y+'px';phone.style.setProperty('--phone-width',state.width+'px');phone.dataset.paused=String(state.paused);}
@@ -817,7 +817,7 @@
     solarAnchor=flowPoint(solarPoint);
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
-    const systemFit=solar?.worldId()==='milica'?Math.max(width<800&&height<700?44:28,22/(width/height)):Math.max(44,46/(width/height));
+    const systemFit=['milica','generator'].includes(solar?.worldId())?Math.max(width<800&&height<700?44:28,22/(width/height)):Math.max(44,46/(width/height));
     worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);

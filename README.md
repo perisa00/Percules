@@ -27,3 +27,7 @@ Galaksija, prilazak i teleport: `public/galaxy.js`.
 Kontakt: `aleksa.perisic2000@gmail.com`, `+381695312480`. Forma samo priprema mailto poruku; korisnik je šalje u svojoj e-mail aplikaciji. Ne čuva niti šalje podatke na server.
 
 Ranije teksture i atribucije ostaju u `public/assets/solar/credits.json` i panelu „O prikazu“. Stari sajt ostaje u Git istoriji na commitu `c645fa8e1efb29075522e02b1548df85700c42d2`. Vraćanje ide kroz pull request.
+
+## 3D studio
+
+Osma destinacija je tirkizna radionica (`#generator`), sa ulaznom slikom, komorom modela i policom rezultata. Geometrija se pravi pri prvom otvaranju i koristi postojeći renderer, uključujući Canvas fallback. Nema preuzimanja modela ili novih tekstura pri ulasku u galaksiju. AI generisanje ostaje označeno kao nedostupno dok se ne završe RunPod servis, budžet i provera stvarnog generisanja. Ne povezivati posetioce sa privatnim Sites pregledom.
