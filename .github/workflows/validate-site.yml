@@ -31,6 +31,7 @@ jobs:
         run: |
           node scripts/check_pages.cjs
           node scripts/check_recovery.cjs
+          node scripts/check_studio_ui.cjs
       - name: Check workout contact and transitions
         run: node scripts/check_workout.cjs
       - name: Check phone flight and playback lifecycle

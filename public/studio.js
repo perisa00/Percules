@@ -41,7 +41,7 @@ function openLinkedWorld(){if(location.hash==='#generator')travel({dataset:{worl
 window.addEventListener('hashchange',openLinkedWorld);
 window.addEventListener('load',openLinkedWorld,{once:true});
 toggle.addEventListener('click',()=>menuOpen(menu.hidden));
-document.querySelectorAll('[data-destination], [data-world]').forEach(button=>button.addEventListener('click',event=>{if(button.tagName==='A'){if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||event.button>0)return;event.preventDefault();}travel(button);}));
+document.querySelectorAll('button[data-destination],a[data-destination],button[data-world],a[data-world]').forEach(button=>button.addEventListener('click',event=>{if(button.tagName==='A'){if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||event.button>0)return;event.preventDefault();}travel(button);}));
 const emblem=byId('studio-emblem'),coarse=matchMedia('(pointer: coarse)').matches;
 emblem.addEventListener('click',event=>{origin=emblem;dispatch('percules:object',{id:'sun',preview:coarse&&event.detail!==0});});
 emblem.addEventListener('pointerenter',()=>{if(!coarse)dispatch('percules:preview',{id:'sun'});});
