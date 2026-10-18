@@ -554,6 +554,17 @@ export function createSolar(canvas, options={}) {
   }
   let width=1,height=1,dpr=1,time=0,distance=180,focus=null,focusZoom=1,center=[0,0,0],lost=false,framing=0,focusMix=0,roll=0,viewInitialized=false;
   let world='studio',bodies=worlds.studio,overviewZoom=1,hovered=null,hoverPoint=null,forcedHover=null,lastYaw=0,lastPitch=0,lastProgress=0,previewedTouchId=null;
+  let overviewScale=1,zoomOffset=[0,0,0],zoomAnchor=null,cameraMoving=false;
+  function resetZoom(){overviewZoom=overviewScale=1;zoomOffset=[0,0,0];zoomAnchor=null;}
+  function viewAxes(yaw=lastYaw,pitch=lastPitch,cameraRoll=roll){
+    const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),cr=Math.cos(cameraRoll),sr=Math.sin(cameraRoll);
+    return {right:[cr*cy+sr*sy*sp,-sr*cp,-cr*sy+sr*cy*sp],up:[sr*cy-cr*sy*sp,cr*cp,-sr*sy-cr*cy*sp]};
+  }
+  function shiftView(dx,dy,axes=viewAxes()){
+    const shift=axes.right.map((v,i)=>v*dx+axes.up[i]*dy);
+    zoomOffset=zoomOffset.map((v,i)=>v+shift[i]);center=center.map((v,i)=>v+shift[i]);
+  }
+  function pan(dx,dy){shiftView(-dx*distance/(height*1.20710678),dy*distance/(height*1.20710678));options.onInvalidate?.();}
   let resources,images=new Map(),highRequested=new Set(),earthExtras=false;
   let studioGeometry=null;
   function prepareStudio(){
@@ -597,7 +608,7 @@ export function createSolar(canvas, options={}) {
   labels();
   function setWorld(id){
     if(!worlds[id]||id===world)return false;
-    world=id;bodies=worlds[id];focus=null;focusZoom=1;overviewZoom=1;clearHover();focusMix=0;viewInitialized=false;framing=0;
+    world=id;bodies=worlds[id];focus=null;focusZoom=1;resetZoom();clearHover();focusMix=0;viewInitialized=false;framing=0;
     if(id==='generator')prepareStudio();
     if(id==='milica'){prepareGym();gymTime=3;workoutKey='';updateWorkout();}
     canvas.dataset.world=id;canvas.dataset.focus='system';labels();options.onSelect?.(null);options.onInvalidate?.();return true;
@@ -622,11 +633,12 @@ export function createSolar(canvas, options={}) {
     const body=bodies.find(b=>b.id===id);if(!body)return;
     if(body.href){clearHover();options.onExternal?.(body.href);return;}
     if(body.destination){clearHover();options.onDestination?.(body.destination);return;}
-    clearHover();focus=body;focusZoom=1;canvas.dataset.focus=id;canvas.dataset.surface='procedural-detail';
+    clearHover();resetZoom();focus=body;focusZoom=1;canvas.dataset.focus=id;canvas.dataset.surface='procedural-detail';
     options.onSelect?.(body);
   }
-  function clearFocus(){focus=null;focusZoom=1;overviewZoom=1;clearHover();canvas.dataset.focus='system';options.onSelect?.(null);}
-  function zoom(delta){
+  function clearFocus(){focus=null;focusZoom=1;resetZoom();clearHover();canvas.dataset.focus='system';options.onSelect?.(null);}
+  function zoom(delta,x=width/2,y=height/2){
+    zoomAnchor={x,y};
     if(!focus){overviewZoom=clamp(overviewZoom*Math.exp(delta*.0011),.72,1.9);return !(overviewZoom>=1.9&&delta>0);}
     focusZoom=clamp(focusZoom*Math.exp(delta*.0011),.66,3.1);
     if(focusZoom>=3.05&&delta>0)clearFocus();
@@ -755,13 +767,21 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   function camera(state){
     const {dt,target,distance:baseDistance,reducedMotion}=state;
     const blend=reducedMotion?1:1-Math.exp(-dt*4.5);
-    const targetDistance=focus?focus.radius*(focus.rings?7.5:width<800?4.2:5.2)*focusZoom/Math.min(1,width/height):baseDistance*overviewZoom;
-    const targetCenter=focus?.position||target;
+    if(state.direct){zoomAnchor=null;zoomOffset=[0,0,0];}
+    overviewScale=Math.exp(mix(Math.log(overviewScale),Math.log(overviewZoom),blend));
+    const previousDistance=distance;
+    const targetDistance=focus?focus.radius*(focus.rings?7.5:width<800?4.2:5.2)*focusZoom/Math.min(1,width/height):baseDistance*overviewScale;
+    const targetCenter=(focus?.position||target).map((v,i)=>v+zoomOffset[i]);
     const returning=!focus&&focusMix>.00001;
     if(!viewInitialized||(!focus&&(!returning||state.direct))){distance=targetDistance;center=[...targetCenter];viewInitialized=true;}
     else {distance=Math.exp(mix(Math.log(distance),Math.log(targetDistance),blend));center=center.map((v,i)=>mix(v,targetCenter[i],blend));}
+    if(zoomAnchor&&!state.direct){
+      const scale=(previousDistance-distance)/(height*1.20710678),sx=zoomAnchor.x-width/2,sy=height/2-zoomAnchor.y-framing*height*.5;
+      shiftView(sx*scale,sy*scale,viewAxes(state.yaw,state.pitch,state.roll));
+    }
     const overviewFraming=world==='milica'&&width<800&&height<700?-.14:0;
     focusMix=mix(focusMix,focus?1:0,blend);framing=mix(framing,focus&&width<800?.40:overviewFraming,blend);
+    cameraMoving=Math.abs(overviewScale-overviewZoom)>.00001||Math.abs(distance-targetDistance)>.0001||Math.abs(focusMix-(focus?1:0))>.00001;
     return {distance,target:[...center],framing};
   }
   function render(state){
@@ -856,7 +876,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   try{if(gl)init();else useFallback();}catch(e){useFallback(e);}
   // Procedural surfaces stay sharp at every zoom without texture downloads.
   canvas.dataset.focus='system';canvas.dataset.world=world;
-  return {render,camera,size,select,clearFocus,zoom,setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,recover:useFallback,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
+  return {render,camera,size,select,clearFocus,zoom,pan,isMoving:()=>cameraMoving,stopZoomAnchor:()=>{zoomAnchor=null;},setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,recover:useFallback,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
 }
 
 

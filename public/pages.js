@@ -10,7 +10,7 @@ function takeTransfer(){
   if(!saved||saved.world!==current||Date.now()-saved.time>15000||Date.now()<saved.time)return null;
   const view=saved.view;
   if(!view||!['yaw','pitch','zoom','panX','panY'].every(key=>Number.isFinite(view[key])))return null;
-  if(Math.abs(view.yaw)>100000||view.pitch<.12||view.pitch>1.35||view.zoom<.72||view.zoom>1.25||Math.abs(view.panX)>.32||Math.abs(view.panY)>.26)return null;
+  if(Math.abs(view.yaw)>100000||view.pitch<.12||view.pitch>1.35||view.zoom<.35||view.zoom>2||Math.abs(view.panX)>4||Math.abs(view.panY)>4)return null;
   return view;
 }
 function go(world,view=null){
@@ -18,6 +18,14 @@ function go(world,view=null){
   try{sessionStorage.removeItem(transferKey);if(view)sessionStorage.setItem(transferKey,JSON.stringify({world,view,time:Date.now()}));}catch{}
   window.location.assign(destination.path);return true;
 }
-function home(){if(!current)return false;window.location.assign('/');return true;}
-globalThis.PerculesPages=Object.freeze({routes,current,go,home,takeTransfer});
+function prepareHome(){
+  if(!current||typeof document==='undefined'||document.querySelector('link[data-home-prefetch]'))return;
+  const link=document.createElement('link');link.rel='prefetch';link.href='/';link.dataset.homePrefetch='true';document.head.append(link);
+}
+function home(view=null){
+  if(!current)return false;
+  try{sessionStorage.removeItem(transferKey);if(view)sessionStorage.setItem(transferKey,JSON.stringify({world:null,view,time:Date.now()}));}catch{}
+  window.location.assign('/');return true;
+}
+globalThis.PerculesPages=Object.freeze({routes,current,go,home,prepareHome,takeTransfer});
 })();

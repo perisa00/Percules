@@ -54,8 +54,9 @@
   let frameId = 0, previousTime = 0, lost = false;
   let pointers = new Map(), lastPinch = 0, lastCentroid=null;
   let panX=0,panY=0,toPanX=0,toPanY=0;
-  if(transfer){yaw=toYaw=transfer.yaw;pitch=toPitch=transfer.pitch;zoom=toZoom=transfer.zoom;panX=toPanX=transfer.panX;panY=toPanY=transfer.panY;document.body.dataset.entryLoading='false';}
-  function pageView(){return journey<.12?{yaw,pitch,zoom:Math.max(.72,zoom),panX,panY}:null;}
+  let mapZoom=1,toMapZoom=1,zoomAnchor=null,returningHome=false;
+  if(transfer){yaw=toYaw=transfer.yaw;pitch=toPitch=transfer.pitch;mapZoom=toMapZoom=transfer.zoom;panX=toPanX=transfer.panX;panY=toPanY=transfer.panY;document.body.dataset.entryLoading='false';}
+  function pageView(){return journey<.12?{yaw,pitch,zoom:mapZoom,panX,panY}:null;}
   function panBy(dx,dy){if(journey>=.12||alignment||flight)return;toPanX=clamp(toPanX+dx/width,-.32,.32);toPanY=clamp(toPanY+dy/height,-.26,.26);vx=vy=0;wake();}
   let mapPoints=[],hoveredWorld=null,focusedWorld=null,pointedWorld=null,litWorld=null;
   let draw, resizeRenderer;
@@ -146,7 +147,7 @@
     sound({type:'jump',delay:alignment.duration,duration:jumpDuration,shieldDuration});
     flight=null;wake();
   }
-  function cancelTeleport(){sound({type:'cancel'});worldFlight=null;alignment=arrival=navigationTarget=null;flight=null;jumpProgress=-1;shieldStart=null;shieldAge=-1;teleportEnergy=0;}
+  function cancelTeleport(){sound({type:'cancel'});returningHome=false;worldFlight=null;alignment=arrival=navigationTarget=null;flight=null;jumpProgress=-1;shieldStart=null;shieldAge=-1;teleportEnergy=0;}
   function flowPoint(p){
     const r=Math.hypot(p[0],p[2]),envelope=smoothstep(.3,1.6,r)*(1-smoothstep(7,8.5,r));
     const angle=envelope*flowPull*(.12+r*.10),c=Math.cos(angle),s=Math.sin(angle);
@@ -235,7 +236,7 @@
       rebuildNav();
       solar.size(width,height,dpr);canvas.dataset.solar='ready';error.hidden=true;wake();
       ensureEffects();
-      return solar;
+      pages?.prepareHome();return solar;
     }).catch(e=>{console.error('Solar initialization failed:',e);cancelTeleport();pendingSelection=null;pendingTeleport=false;zoomWorld=null;zoom=toZoom=1;error.textContent='Veza je prekinuta. Priča je dostupna kroz Meni; „Ponovo učitaj” vraća prikaz.';document.dispatchEvent(new CustomEvent('percules:unavailable',{detail:{world:canvas.dataset.requestedWorld||zoomWorld||'studio'}}));error.hidden=false;solarLoading=null;wake();}).finally(()=>{el('enter-solar').removeAttribute('aria-busy');canvas.dataset.loading='false';});
     return solarLoading;
   }
@@ -254,21 +255,18 @@
     const destination=pendingSelection?.world||'studio';solarPoint=[...destinations[destination].point];solar.setWorld(destination);solar.clearFocus();rebuildNav();
     beginTeleport(()=>flowPoint(solarPoint),cameraLimits.minZoom);
   }
-  function changeZoom(delta){
+  function changeZoom(delta,x=width/2,y=height/2){
+    if(!Number.isFinite(delta))return;
     pendingSelection=null;pendingTeleport=false;if(flight||alignment)toZoom=zoom;cancelTeleport();
-    if(journey>.92&&solar?.zoom(delta)){wake();return;}
-    if(delta<0&&journey<.12&&!zoomWorld){
-      const nearest=mapPoints.filter(p=>p.depth>.1&&p.x>=0&&p.x<=width&&p.y>=0&&p.y<=height).sort((a,b)=>Math.hypot(a.x-width/2,a.y-height/2)-Math.hypot(b.x-width/2,b.y-height/2))[0];
-      zoomWorld=destinations[nearest?.id]?.world||nearest?.id||'studio';
-      solarPoint=[...destinations[zoomWorld].point];
-      if(solar){solar.setWorld(zoomWorld);solar.clearFocus();rebuildNav();}
-      canvas.dataset.zoomTarget=zoomWorld;requestWorld(zoomWorld);
+    if(journey>.92&&solar){
+      if(!solar.zoom(clamp(delta,-500,500),x,y))reset();
+      wake();return;
     }
-    toZoom=limitZoom(toZoom*Math.exp(clamp(delta,-500,500)*.00165));
-    if(!pageWorld&&toZoom<.74&&zoomWorld&&pages?.go(zoomWorld,pageView()))return;
-    if(pageWorld&&toZoom>.74&&pages?.home())return;
-    if(toZoom>=1)zoomWorld=null;
-    if(toZoom<.9)ensureSolar();wake();
+    // Wheel/pinch explore the map. Entering a world is an explicit star/link action.
+    if(journey>=.12){reset();return;}
+    zoomAnchor={x:clamp(x,0,width),y:clamp(y,0,height)};
+    toMapZoom=clamp(toMapZoom*Math.exp(clamp(delta,-500,500)*.00165),.35,2);
+    vx=vy=0;wake();
   }
   function toggleMotion(){breathingEnabled=!breathingEnabled&&!motion.matches;el('motion-toggle').setAttribute('aria-pressed',String(!breathingEnabled));el('motion-toggle').textContent=breathingEnabled?'Pauziraj blage animacije':'Nastavi blage animacije';wake();}
   let gl=null;
@@ -783,6 +781,13 @@
     canvas.dataset.pan=panX.toFixed(4)+','+panY.toFixed(4);
     const oldYaw=yaw,oldPitch=pitch;
     yaw=lerp(yaw,toYaw,ease);pitch=lerp(pitch,toPitch,ease);
+    const oldMapZoom=mapZoom;
+    mapZoom=Math.exp(lerp(Math.log(mapZoom),Math.log(toMapZoom),ease));
+    if(zoomAnchor&&journey<.12&&!flight&&!alignment){
+      const ratio=oldMapZoom/mapZoom,sx=(zoomAnchor.x-width/2)/width,sy=(height/2-zoomAnchor.y)/height;
+      panX=panX*ratio+sx*(1-ratio);toPanX=toPanX*ratio+sx*(1-ratio);
+      panY=panY*ratio+sy*(ratio-1);toPanY=toPanY*ratio+sy*(ratio-1);
+    }
     let teleportTarget=0;
     if(arrival){arrival.age=(time-arrival.start)/1000;if(arrival.age>=arrivalDuration)arrival=null;}
     if(alignment&&time-alignment.start>=alignment.duration*1000){
@@ -794,7 +799,7 @@
       const t=clamp(flight.elapsed/flight.duration,0,1),e=smoothstep(.02,.86,t);
       jumpProgress=t;teleportTarget=phaseForJump(t);zoom=Math.exp(lerp(flight.from,flight.to,e));
       if(flight.to<flight.from&&shieldStart===null)shieldStart=flight.start;
-      if(t===1){if(flight.to<flight.from)arrival={start:flight.start+flight.duration*1000,age:Math.max(0,(time-flight.start-flight.duration*1000)/1000)};zoom=toZoom;flight=null;jumpProgress=-1;}
+      if(t===1){if(flight.to<flight.from)arrival={start:flight.start+flight.duration*1000,age:Math.max(0,(time-flight.start-flight.duration*1000)/1000)};else navigationTarget=null;zoom=toZoom;flight=null;jumpProgress=-1;}
     }
     else zoom=Math.exp(lerp(Math.log(zoom),Math.log(toZoom),motion.matches?1:1-Math.exp(-dt*4.5)));
     // Keep the galaxy visible while the destination module is still in flight.
@@ -836,7 +841,7 @@
     if(alignment){const t=clamp((time-alignment.start)/1000/alignment.duration,0,1),e=t*t*t*(10+t*(-15+6*t)),target=navigationTarget();center=alignment.from.map((v,i)=>lerp(v,target[i],e));}
     else center=navigationTarget?[...navigationTarget()]:solarAnchor.map(v=>v*smoothstep(0,.4,journey));
     const systemFit=['milica','generator'].includes(solar?.worldId())?Math.max(width<800&&height<700?44:28,22/(width/height)):Math.max(44,46/(width/height));
-    worldDistance=journey>0?fit*Math.exp(-journey*Math.log(fit/(systemFit*solarScale))):fit*zoom;
+    worldDistance=journey>0?fit*mapZoom*Math.exp(-journey*Math.log(fit*mapZoom/(systemFit*solarScale))):fit*mapZoom;
     const braking=arrival?arrival.age*1.35/arrivalDuration:-1;
     if(flight&&flight.to<flight.from)worldDistance*=1+.20*smoothstep(.66,1,jumpProgress);
     else if(braking>=0&&!motion.matches)worldDistance*=1+.20*Math.exp(-braking*4)*Math.cos(braking*4.5)*(1-smoothstep(1,1.35,braking));
@@ -849,7 +854,7 @@
       center=center.map((value,i)=>value+right[i]*sx+up[i]*sy);
     }
     if(solar){
-      const view=solar.camera({dt,target:center.map((v,i)=>(v-solarAnchor[i])/solarScale),distance:worldDistance/solarScale,reducedMotion:motion.matches||!breathingEnabled,direct:!!flight||!!alignment||!!arrival});
+      const view=solar.camera({dt,target:center.map((v,i)=>(v-solarAnchor[i])/solarScale),distance:worldDistance/solarScale,yaw,pitch,roll:cameraRoll,reducedMotion:motion.matches||!breathingEnabled,direct:!!flight||!!alignment||!!arrival});
       worldDistance=view.distance*solarScale;center=view.target.map((v,i)=>solarAnchor[i]+v*solarScale);worldFraming=view.framing;
     }
     // Both layers remain present. The local canvas has no separate background.
@@ -869,13 +874,28 @@
     if(pendingSelection&&journey>.98&&solar&&!flight&&!alignment&&!worldFlight){
       const destination=pendingSelection;pendingSelection=null;changeWorld(destination.world,destination.id);
     }
-    const unsettled=Math.abs(toYaw-yaw)+Math.abs(toPitch-pitch)+Math.abs(toZoom-zoom)+Math.abs(vx)+Math.abs(vy)+Math.abs(toPanX-panX)+Math.abs(toPanY-panY)>.0001;
+    if(returningHome&&!flight&&journey<.005){returningHome=false;pages?.home(pageView());}
+    const unsettled=solar?.isMoving()||Math.abs(toYaw-yaw)+Math.abs(toPitch-pitch)+Math.abs(toZoom-zoom)+Math.abs(toMapZoom-mapZoom)+Math.abs(vx)+Math.abs(vy)+Math.abs(toPanX-panX)+Math.abs(toPanY-panY)>.0001;
     if(!frameId&&(beaconFading||shieldAge>=0||teleportEnergy>.001||flight||worldFlight||pendingSelection||alignment||arrival||breathingEnabled||pointers.size||unsettled||effectEnergy>.0001||compression>.0001||Math.abs(flowPull)+Math.abs(flowVelocity)>.0001||Math.abs(cameraRoll+.20)>.00001))frameId=requestAnimationFrame(frame);
   }
   function wake(){if(!frameId&&!document.hidden&&!lost)frameId=requestAnimationFrame(frame);}
   function interact(){wake();}
-  function reset(event){event?.preventDefault?.();if(pages?.home())return;zoomWorld=null;toPanX=toPanY=0;pendingSelection=null;pendingTeleport=false;cancelTeleport();document.dispatchEvent(new CustomEvent('percules:close'));if(solar?.worldId()!=='studio'){solar?.setWorld('studio');if(solar)rebuildNav();}jumpGoal=[0,0];flight=journey>.2&&!motion.matches?{from:Math.log(zoom),to:0,elapsed:0,start:performance.now(),duration:jumpDuration}:null;if(flight)sound({type:'jump',duration:jumpDuration,shield:false});solar?.clearFocus();toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;interact();}
+  function reset(event){
+    if(event&&(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||event.button>0))return;
+    event?.preventDefault?.();if(returningHome)return;
+    zoomWorld=null;zoomAnchor=null;toPanX=toPanY=0;toMapZoom=1;pendingSelection=null;pendingTeleport=false;cancelTeleport();
+    document.dispatchEvent(new CustomEvent('percules:close'));solar?.clearFocus();
+    jumpGoal=[0,0];toYaw=yaw+Math.atan2(Math.sin(.25-yaw),Math.cos(.25-yaw));toPitch=.73;toZoom=1;vx=vy=0;
+    if(journey>.2&&!motion.matches){
+      const origin=[...center],start=performance.now();
+      flight={from:Math.log(zoom),to:0,elapsed:0,start,duration:jumpDuration};
+      navigationTarget=()=>origin.map(v=>v*(1-smoothstep(0,jumpDuration,(performance.now()-start)/1000)));
+      returningHome=!!pageWorld;pages?.prepareHome();sound({type:'jump',duration:jumpDuration,shield:false});
+    }else if(pages?.home({yaw:.25,pitch:.73,zoom:1,panX:0,panY:0}))return;
+    interact();
+  }
   canvas.addEventListener('pointerdown',e=>{
+    zoomAnchor=null;solar?.stopZoomAnchor();
     const panning=journey<.12&&(e.button===2||e.shiftKey);if(e.button!==0&&!panning)return;pointedWorld=null;canvas.style.cursor='';updateBeaconLight();pendingSelection=null;if(flight||alignment)toZoom=zoom;cancelTeleport();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,time:e.timeStamp,moved:false,mode:panning?'pan':'orbit'});if(pointers.size>1)for(const p of pointers.values())p.moved=true;vx=vy=0;lastPinch=0;lastCentroid=null;
     if(pointers.size===2){const [a,b]=[...pointers.values()];lastPinch=Math.hypot(a.x-b.x,a.y-b.y);lastCentroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};}canvas.classList.add('dragging');interact();
   });
@@ -892,7 +912,7 @@
       vx=motion.matches?0:lerp(vx,clamp(dx*.0042/elapsed,-1.15,1.15),weight);
       vy=motion.matches?0:lerp(vy,clamp(dy*.0028/elapsed,-.65,.65),weight);
     }
-    else {const [a,b]=[...pointers.values()],distance=Math.hypot(a.x-b.x,a.y-b.y),centroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};if(lastCentroid)panBy(centroid.x-lastCentroid.x,centroid.y-lastCentroid.y);if(lastPinch>0&&distance>1)changeZoom(Math.log(lastPinch/distance)*700);lastPinch=distance;lastCentroid=centroid;vx=vy=0;}
+    else {const [a,b]=[...pointers.values()],distance=Math.hypot(a.x-b.x,a.y-b.y),centroid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};if(lastCentroid){const dx=centroid.x-lastCentroid.x,dy=centroid.y-lastCentroid.y;if(journey>.92)solar?.pan(dx,dy);else{panBy(dx,dy);panX=toPanX;panY=toPanY;}}if(lastPinch>0&&distance>1)changeZoom(Math.log(lastPinch/distance)*700,centroid.x,centroid.y);lastPinch=distance;lastCentroid=centroid;vx=vy=0;}
     interact();
   });
   function release(e){
@@ -913,7 +933,7 @@
   }
   canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
   canvas.addEventListener('contextmenu',e=>{if(journey<.12)e.preventDefault();});
-  canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1));},{passive:false});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1),e.clientX,e.clientY);},{passive:false});
   canvas.addEventListener('pointerleave',e=>{pointedWorld=null;canvas.style.cursor='';updateBeaconLight();if(!pointers.size&&!coarse&&!e.relatedTarget?.closest?.('#object-preview'))solar?.clearHover();});
   canvas.addEventListener('dblclick',()=>{if(journey<.12)reset();});
   canvas.addEventListener('keydown',e=>{

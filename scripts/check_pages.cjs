@@ -11,6 +11,9 @@ const root=fixture();assert.equal(root.api.current,null);assert.equal(root.api.h
 assert.equal(root.api.go('apps',view),true);assert.deepEqual(root.assigned,['/aplikacije/']);
 const arrival=fixture('/aplikacije/',root.storage);assert.equal(arrival.api.current,'apps');assert.deepEqual(JSON.parse(JSON.stringify(arrival.api.takeTransfer())),view);assert.equal(arrival.api.takeTransfer(),null,'The transfer is single use; reload must open the system directly');
 assert.equal(arrival.api.go('apps'),false);assert.equal(arrival.api.home(),true);assert.deepEqual(arrival.assigned,['/']);
+const returning=fixture('/aplikacije/');assert.equal(returning.api.home(view),true);
+const home=fixture('/',returning.storage);assert.deepEqual(JSON.parse(JSON.stringify(home.api.takeTransfer())),view,'Home must resume the final camera after the reverse flight');assert.equal(home.api.takeTransfer(),null);
+const zoomed=fixture();zoomed.api.go('apps',{...view,zoom:.35,panX:1,panY:-1});assert.ok(fixture('/aplikacije/',zoomed.storage).api.takeTransfer(),'A close map view remains valid across documents');
 assert.equal(fixture('/missing/').api.current,null);
 assert.equal(fixture('/aplikacije/index.html').api.current,'apps');
 const blocked=fixture('/',new Map(),true);assert.equal(blocked.api.go('process',view),true);assert.deepEqual(blocked.assigned,['/nacin-rada/']);
