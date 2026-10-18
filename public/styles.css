@@ -314,6 +314,6 @@ a.brand,a.galaxy-destination,a.journey-button,a.text-button{text-decoration:none
 a.panel-cta{text-decoration:none}
 body[data-entry-loading="true"] :is(canvas,#galaxy-destinations,#planet-labels,#planet-nav,.view-controls){visibility:hidden}
 body[data-entry-loading="true"] .loading-scene{display:flex}
-@view-transition{navigation:auto}
-@media(prefers-reduced-motion:reduce){::view-transition-group(*){animation:none}}
+
+
 body[data-theme="pink"] .studio-menu nav a{color:#fbe5ef}
