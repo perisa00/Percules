@@ -583,6 +583,7 @@ export function createSolar(canvas, options={}) {
       return {...mesh,buffer,count:mesh.data.length/10};
     });
   }
+  function prepareWorld(id){if(id==='milica')prepareGym();else if(id==='generator')prepareStudio();}
   let gymTime=3,gymPaused=false,gymSuppressed=false,gymState=workoutFrame(gymTime),workoutKey='';
   function updateWorkout(){
     gymState=workoutFrame(gymTime);
@@ -617,7 +618,7 @@ export function createSolar(canvas, options={}) {
     const key=high?id:`${id}-low`;
     if(images.has(key))return;
     const image=new Image();images.set(key,image);image.decoding='async';
-    image.onload=()=>{if(!lost&&resources)upload(id,image,high);options.onInvalidate?.();};
+    image.onload=()=>{const apply=()=>{if(!lost&&resources)upload(id,image,high);options.onInvalidate?.();};if(options.deferWork)options.deferWork('solar-texture-'+key,apply);else apply();};
     image.onerror=()=>{images.delete(key);if(high)highRequested.delete(id);};
     image.src=`/assets/solar/${key}.webp`;
   }
@@ -876,7 +877,7 @@ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(1./2.2)),uOpacity);
   try{if(gl)init();else useFallback();}catch(e){useFallback(e);}
   // Procedural surfaces stay sharp at every zoom without texture downloads.
   canvas.dataset.focus='system';canvas.dataset.world=world;
-  return {render,camera,size,select,clearFocus,zoom,pan,isMoving:()=>cameraMoving,stopZoomAnchor:()=>{zoomAnchor=null;},setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,recover:useFallback,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
+  return {render,camera,size,prepareWorld,select,clearFocus,zoom,pan,isMoving:()=>cameraMoving,stopZoomAnchor:()=>{zoomAnchor=null;},setWorld,pick,probe,hover,clearHover,activate,stepWorkout,pauseWorkout,recover:useFallback,worldId:()=>world,getBodies:()=>bodies,isFocused:()=>!!focus,focusId:()=>focus?.id||null};
 }
 
 

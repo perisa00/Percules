@@ -139,9 +139,9 @@ checkCursorZoom();
 
 async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   let now=0,sequence=0;
-  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore;const imageEvents=[],unavailable=[],homeCalls=[];
-  const corePromise=fault==='slow'||fault==='reject'?new Promise((resolve,reject)=>{resolveCore=resolve;rejectCore=reject;}):null;
-  const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
+  const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore,coreCreations=0;const imageEvents=[],unavailable=[],homeCalls=[],idle=[],routeEvents={},assigned=[],history=[];
+  const corePromise=['slow','reject','live-start'].includes(fault)?new Promise((resolve,reject)=>{resolveCore=resolve;rejectCore=reject;}):null;
+  const ctx2d=new Proxy({createRadialGradient:()=>({addColorStop(){}}),getImageData:()=>({data:new Uint8Array(384*384*4).fill(180)})},{get:(o,k)=>k in o?o[k]:()=>{}});
   function node(id){
     if(nodes.has(id))return nodes.get(id);
     const el=element();el.id=id;const destination=Object.entries(context.PerculesDestinations||{}).find(([,d])=>d.marker===id);if(destination)el.dataset.world=destination[0];el.classList={add(){},remove(){}};el.focus=()=>{};
@@ -157,19 +157,54 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     matchMedia:query=>({matches:query.includes('reduced-motion')?reduced:coarse,addEventListener(){}}),
     performance:{now:()=>now},CustomEvent:function(type,options){this.type=type;this.detail=options?.detail;},
     addEventListener(){},requestAnimationFrame:fn=>{const id=++sequence;frames.set(id,fn);return id;},cancelAnimationFrame:id=>frames.delete(id),
-    solarModule:{createSolar:(canvas,options)=>localSolar=createSolar(canvas,options),worlds,bodies:worlds.studio},
+    solarModule:{createSolar:(canvas,options)=>{coreCreations++;return localSolar=createSolar(canvas,options);},worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
   if(fault==='home')context.PerculesPages={current:'apps',takeTransfer:()=>null,go:()=>false,prepareHome(){},home:view=>{homeCalls.push({time:now,view});return true;}};
-  let script=galaxy.replace("import('./solar.js?v=cursor-flight-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+  if(['live','live-start','live-data'].includes(fault)){
+    document.createElement=()=>{const el=element();el.getContext=type=>type==='2d'?ctx2d:gl;return el;};
+    document.head={children:[],append(element){this.children.push(element);}};
+    document.querySelector=selector=>selector.includes('data-home-prefetch')?document.head.children.find(e=>e.dataset.homePrefetch):node(selector);
+    context.window.location={pathname:fault==='live-start'?'/aplikacije/':'/',assign:url=>assigned.push(url)};
+    context.window.history={pushState:(state,title,url)=>{history.push(url);context.window.location.pathname=url;}};
+    context.window.addEventListener=(type,fn)=>routeEvents[type]=fn;
+    context.requestIdleCallback=fn=>idle.push(fn);context.setTimeout=fn=>idle.push(fn);
+    if(fault==='live-data')context.navigator={connection:{saveData:true}};
+  }
+  let script=galaxy.replace("import('./solar.js?v=mobile-flight-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
-  vm.createContext(context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
+  vm.createContext(context);if(fault?.startsWith('live'))vm.runInContext(fs.readFileSync('public/pages.js','utf8'),context);vm.runInContext(fs.readFileSync('public/destinations.js','utf8'),context);vm.runInContext(script,context);
   const points=Object.values(context.PerculesDestinations).filter(d=>d.marker).map(d=>d.point.join(','));assert.equal(new Set(points).size,8);
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
+  if(fault==='live-start'){
+    context.window.location.pathname='/';routeEvents.popstate();resolveCore(context.solarModule);
+    for(let i=0;i<12;i++)await Promise.resolve();tick(100);
+    assert.equal(context.PerculesPages.current,null);assert.equal(body.dataset.scene,'galaxy');assert.equal(body.dataset.entryLoading,'false','Back during initial loading must not leave the root hidden');return;
+  }
+  if(fault==='live-data'){
+    idle.shift()();for(let i=0;i<12;i++)await Promise.resolve();assert.equal(coreCreations,0,'Save Data must not prewarm the local renderer');
+    navigate('apps');for(let i=0;i<12;i++)await Promise.resolve();tick(140);assert.equal(coreCreations,1);assert.equal(body.dataset.world,'apps');return;
+  }
+  if(fault==='live'){
+    const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+    assert.equal(idle.length,1);idle.shift()();await flush();tick(2);
+    assert.equal(coreCreations,1,'Prepare one renderer before the first phone tap');assert.equal(body.dataset.scene,'galaxy');assert.equal(node('solar').style.visibility,'hidden');assert.notEqual(node('galaxy').dataset.loading,'true');
+    const surface=node('galaxy');navigate('apps');await flush();tick(20);
+    assert.equal(context.window.location.pathname,'/aplikacije/');assert.equal(body.dataset.scene,'travel');
+    imageEvents[0].onload();idle.shift()();assert.notEqual(node('galaxy').dataset.detail,'high','Texture processing waits until the phone finishes its flight');
+    tick(140);for(let i=0;i<3&&idle.length;i++)idle.shift()();
+    assert.equal(node('galaxy').dataset.detail,'high');assert.equal(body.dataset.world,'apps');assert.equal(body.dataset.scene,'system');
+    node('brand-home').listeners.click();tick(90);assert.equal(context.window.location.pathname,'/');assert.equal(body.dataset.scene,'galaxy');
+    navigate('websites');navigate('contact');await flush();tick(150);assert.equal(body.dataset.world,'contact','Rapid taps must keep only the last pending selection');
+    const count=history.length;context.window.location.pathname='/aplikacije/';routeEvents.popstate();await flush();tick(150);assert.equal(body.dataset.world,'apps');assert.equal(history.length,count,'Back must not create another history entry');
+    context.window.location.pathname='/';routeEvents.popstate();tick(90);assert.equal(body.dataset.scene,'galaxy');
+    assert.equal(surface,node('galaxy'));assert.equal(coreCreations,1,'All round trips must reuse the prepared renderer');assert.equal(assigned.length,0,'Phone round trips must not replace the document');
+    return;
+  }
   if(fault==='home'){
     for(let i=0;i<12;i++)await Promise.resolve();tick(3);
     assert.equal(body.dataset.scene,'system');assert.equal(body.dataset.world,'apps');
@@ -372,7 +407,7 @@ checkTouch();
 const cameraOnly=process.argv.includes('--camera');
 (cameraOnly?Promise.resolve():checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true))).then(async()=>{
   for(const fault of cameraOnly?['home']:['slow','reject','effects','context','home'])await checkNavigation(false,false,fault==='effects'||fault==='context'||fault==='home',fault);
-  await checkNavigation(true,false,true,'home');await checkNavigation(true,true,true,'zoom');
+  await checkNavigation(true,false,true,'home');await checkNavigation(true,true,true,'zoom');for(const mode of ['live','live-start','live-data'])await checkNavigation(false,true,true,mode);
   checkSolarRecovery();checkSound();checkShaders();console.log('Navigation and resilience checks passed: center zoom, slow/failed core, stalled effects, WebGL recovery, quiet opt-in audio and single frame loop.');
 }).catch(error=>{console.error(error);process.exitCode=1;});
 

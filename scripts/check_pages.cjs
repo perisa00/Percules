@@ -21,11 +21,25 @@ const old=new Map([['percules-page-flight-v1',JSON.stringify({world:'apps',view,
 assert.equal(fixture('/aplikacije/',old).api.takeTransfer(),null);
 const bad=new Map([['percules-page-flight-v1',JSON.stringify({world:'apps',view:{...view,pitch:100},time:Date.now()})]]);
 assert.equal(fixture('/aplikacije/',bad).api.takeTransfer(),null);
+{
+ const paths=[],assigned=[],handlers={},metadata=new Map(),body={dataset:{}};
+ const document={body,title:'',querySelector:selector=>({setAttribute:(key,value)=>metadata.set(selector+':'+key,value)}),dispatchEvent:event=>paths.push({event:event.detail.world})};
+ const window={location:{pathname:'/',assign:url=>assigned.push(url)},history:{pushState:(state,title,url)=>{paths.push(url);window.location.pathname=url;}},addEventListener:(type,fn)=>handlers[type]=fn};
+ const context={window,document,console,Date,JSON,Number,Object,CustomEvent:function(type,{detail}){this.type=type;this.detail=detail;}};
+ vm.createContext(context);vm.runInContext(source,context);const api=context.PerculesPages;
+ assert.equal(api.enable(),true);assert.equal(api.go('apps'),false,'Enhanced routes keep the current document alive');
+ assert.equal(api.current,'apps');assert.equal(document.title,'Aplikacije — Percules Digital Studio');assert.equal(body.dataset.entryWorld,'apps');
+ assert.equal(metadata.get('link[rel="canonical"]:href'),'https://percules.rs/aplikacije/');
+ assert.equal(api.go('apps'),false);assert.equal(paths.length,1,'No duplicate history entry for the current world');
+ assert.equal(api.home(),true);assert.equal(api.current,null);assert.deepEqual(paths,['/aplikacije/','/']);assert.equal(assigned.length,0);
+ window.location.pathname='/kontakt/';handlers.popstate();assert.equal(api.current,'contact');assert.deepEqual(paths.at(-1),{event:'contact'});
+ window.history.pushState=()=>{throw Error('history unavailable');};api.go('process');assert.deepEqual(assigned,['/nacin-rada/'],'A failed enhanced route must still open a real document');
+}
 for(const [world,item] of Object.entries(root.api.routes)){
  const html=fs.readFileSync('public'+item.path+'index.html','utf8');
  assert.ok(html.includes('data-entry-world="'+world+'"'),'Direct route must boot its own world');
  assert.ok(html.includes('rel="canonical" href="https://percules.rs'+item.path+'"'));
- assert.ok(html.includes('<script src="/pages.js?v=2" defer>'));
+ assert.ok(html.includes('<script src="/pages.js?v=3" defer>'));
  for(const item of Object.values(root.api.routes))assert.ok(html.includes('href="'+item.path+'"'),'All destinations must expose a native link');
  assert.ok(html.includes('<a')&&html.includes('href="/"'),'Each page must have a native way back');
  assert.ok(!/(?:href|src|poster)="(?:assets\/|[a-z-]+\.js)/.test(html),'Nested page assets must resolve from the site root');
