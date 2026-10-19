@@ -654,7 +654,8 @@
     function use(p){
       gl.useProgram(p);const u=uniforms.get(p);
       gl.uniform1f(u.uCloseDetail,closeDetail);gl.uniform1f(u.uDetailMix,detailMix);
-      gl.uniform1f(u.uYaw,yaw);gl.uniform1f(u.uPitch,pitch);gl.uniform1f(u.uDistance,worldDistance);gl.uniform3fv(u.uCenter,center);gl.uniform3fv(u.uAnchor,solarAnchor);gl.uniform1f(u.uNear,Math.max(.0000001,worldDistance*.0002));gl.uniform1f(u.uFraming,worldFraming);gl.uniform1f(u.uJourney,journey);gl.uniform1f(u.uDiskDetail,(1-volumeBlend*.6)*(1-smoothstep(.28,.68,journey)));gl.uniform1f(u.uFogStrength,volumeBlend*(1-smoothstep(.42,.72,journey)));gl.uniform1f(u.uLocal,0);gl.uniform1f(u.uBeacon,0);
+      const surfaceFade=Math.max(closeDetail*.16,(1-smoothstep(.2,.58,pitch))*.94);
+      gl.uniform1f(u.uYaw,yaw);gl.uniform1f(u.uPitch,pitch);gl.uniform1f(u.uDistance,worldDistance);gl.uniform3fv(u.uCenter,center);gl.uniform3fv(u.uAnchor,solarAnchor);gl.uniform1f(u.uNear,Math.max(.0000001,worldDistance*.0002));gl.uniform1f(u.uFraming,worldFraming);gl.uniform1f(u.uJourney,journey);gl.uniform1f(u.uDiskDetail,(1-surfaceFade)*(1-smoothstep(.28,.68,journey)));gl.uniform1f(u.uFogStrength,volumeBlend*(1-smoothstep(.42,.72,journey)));gl.uniform1f(u.uLocal,0);gl.uniform1f(u.uBeacon,0);
       gl.uniform1f(u.uAspect,width/height);gl.uniform1f(u.uRoll,cameraRoll);gl.uniform1f(u.uDpr,dpr);gl.uniform1f(u.uZoom,zoom);
       gl.uniform1f(u.uEnergy,effectEnergy);gl.uniform1f(u.uTime,motion.matches?0:effectTime);
       gl.uniform1f(u.uBreath,breath);gl.uniform1f(u.uCompression,compression);gl.uniform1f(u.uFlowPull,flowPull);
@@ -746,7 +747,7 @@
     }
     draw=()=>{
       closeDetail=1-smoothstep(.38,.82,mapZoom);
-      volumeBlend=postAvailable?Math.max(closeDetail*.28,smoothstep(.015,.15,journey),1-smoothstep(.2,.58,pitch)):0;
+      volumeBlend=postAvailable?Math.max(closeDetail*.28,smoothstep(.015,.15,journey),(1-smoothstep(.2,.58,pitch))*.58):0;
       if((closeDetail>.02||pitch<.58)&&journey<.4)prepareCloseDetail();
       detailMix=detailReadyAt===null?0:motion.matches?1:smoothstep(0,420,performance.now()-detailReadyAt);
       materialFading=detailReadyAt!==null&&detailMix<1;
