@@ -75,7 +75,7 @@
   function pageView(){return journey<.12?{yaw,pitch,zoom:mapZoom,panX,panY}:null;}
   function panBy(dx,dy){if(journey>=.12||alignment||flight)return;toPanX=clamp(toPanX+dx/width,-.32,.32);toPanY=clamp(toPanY+dy/height,-.26,.26);vx=vy=0;wake();}
   let mapPoints=[],hoveredWorld=null,focusedWorld=null,pointedWorld=null,litWorld=null;
-  let draw, resizeRenderer, materialFading=false;
+  let draw, resizeRenderer, materialFading=false, materialFadeUntil=0;
   let flight=null,alignment=null,arrival=null,navigationTarget=null,pendingTeleport=false,teleportEnergy=0,worldDistance=20,worldFraming=0;
   let worldFlight=null,pendingSelection=null;
   let solar=null,solarLoading=null,zoomWorld=null,effectsLoading=false,journey=0,center=[0,0,0],quality=1,slowFrames=0,qualityFrames=0,focusedBody=null,uiScene='';
@@ -619,7 +619,7 @@
           surface.getContext('2d').drawImage(image,0,0,surface.width,surface.height);
           gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,detailTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
           gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,surface);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
-          detailReadyAt=performance.now();canvas.dataset.material='dust';parkedGalaxy=false;wake();
+          detailReadyAt=performance.now();materialFadeUntil=detailReadyAt+420;canvas.dataset.material='dust';parkedGalaxy=false;wake();
         }catch(error){console.warn('Close galaxy detail unavailable:',error);}
       });
       image.src='/assets/galaxy/dust-detail-v1.webp';
@@ -750,7 +750,6 @@
       volumeBlend=postAvailable?Math.max(closeDetail*.28,smoothstep(.015,.15,journey),(1-smoothstep(.2,.58,pitch))*.58):0;
       if((closeDetail>.02||pitch<.58)&&journey<.4)prepareCloseDetail();
       detailMix=detailReadyAt===null?0:motion.matches?1:smoothstep(0,420,performance.now()-detailReadyAt);
-      materialFading=detailReadyAt!==null&&detailMix<1;
       canvas.dataset.depth=volumeBlend>.02?'volume':'wide';
       gl.bindFramebuffer(gl.FRAMEBUFFER,postAvailable?targets[0].framebuffer:null);gl.viewport(0,0,canvas.width,canvas.height);
       gl.disable(gl.BLEND);use(glowProgram);gl.bindBuffer(gl.ARRAY_BUFFER,screenBuffer);attributes([[ga,2,0,0]]);gl.drawArrays(gl.TRIANGLES,0,6);
@@ -797,7 +796,7 @@
   }
 
   function setupFallback(){
-    ++rendererGeneration;gl=null;lost=false;materialFading=false;
+    ++rendererGeneration;gl=null;lost=false;materialFading=false;materialFadeUntil=0;
     const ctx=fallbackCanvas.getContext('2d');if(!ctx)throw new Error('Grafički prikaz nije dostupan.');
     fallbackCanvas.hidden=false;
     resizeRenderer=()=>{};
@@ -839,6 +838,7 @@
   }
   function frame(time){
     frameId=0;if(document.hidden||lost)return;
+    materialFading=!motion.matches&&time<materialFadeUntil;
     const rawDt=previousTime?(time-previousTime)/1000:1/60,dt=Math.min(rawDt,.05);previousTime=time;
     if(rawDt<.15&&!motion.matches){qualityFrames++;slowFrames+=rawDt>.027?1:0;if(qualityFrames>=180&&!flight&&!alignment&&!worldFlight&&!arrival&&!pointers.size){if(slowFrames>110&&quality>.66){quality=Math.max(.65,quality*.82);resize();}qualityFrames=slowFrames=0;}}
     if(!pointers.size){

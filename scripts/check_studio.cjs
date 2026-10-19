@@ -206,6 +206,9 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     for(let i=0;i<8&&idle.length;i++)idle.shift()();tick(40);
     assert.equal(surface.dataset.material,'dust');assert.equal(surface.dataset.renderer,'webgl');assert.equal(surface.dataset.loading,undefined);
     node('motion-toggle').listeners.click();tick(300);assert.equal(frames.size,0,'The material fade must finish and allow a paused scene to sleep');
+    navigate('apps');for(let i=0;i<12;i++)await Promise.resolve();tick(160);assert.equal(body.dataset.scene,'system');
+    detail.onload();for(let i=0;i<8&&idle.length;i++)idle.shift()();tick(120);
+    assert.equal(frames.size,0,'A material completing behind a parked phone galaxy must not keep an invisible frame loop alive');
     node('galaxy').listeners.webglcontextlost({preventDefault(){}});detail.onload();
     for(let i=0;i<8&&idle.length;i++)idle.shift()();tick(2);assert.equal(surface.dataset.renderer,'canvas','Late material completion must not revive a lost context');return;
   }
