@@ -557,8 +557,7 @@
           float density=luminance*4.2*edge*exp(-height*height)*(.22+1.8*smoothstep(.15,.8,n))*(.45+.55*grain);
           float dust=(1.-smoothstep(.12,.58,grain))*smoothstep(.1,.38,r)*exp(-height*height*1.7)*edge*.32;
           float opacity=1.-exp(-(density+dust)*stepSize*1.35);
-          vec3 tint=clamp(photo/max(.018,luminance),vec3(0.),vec3(2.6));
-          vec3 emission=tint*vec3(.49,.52,.58)*(.85+n*.22)*density/max(.001,density+dust);
+          vec3 emission=photo*vec3(1.45,1.5,1.65)*(.85+n*.22)*density/max(.001,density+dust);
           light+=transmission*opacity*emission;transmission*=1.-opacity;
         }
         gl_FragColor=vec4(light*uFogStrength*uTextureMix,(1.-transmission)*uFogStrength*uTextureMix);
@@ -655,7 +654,7 @@
     function use(p){
       gl.useProgram(p);const u=uniforms.get(p);
       gl.uniform1f(u.uCloseDetail,closeDetail);gl.uniform1f(u.uDetailMix,detailMix);
-      gl.uniform1f(u.uYaw,yaw);gl.uniform1f(u.uPitch,pitch);gl.uniform1f(u.uDistance,worldDistance);gl.uniform3fv(u.uCenter,center);gl.uniform3fv(u.uAnchor,solarAnchor);gl.uniform1f(u.uNear,Math.max(.0000001,worldDistance*.0002));gl.uniform1f(u.uFraming,worldFraming);gl.uniform1f(u.uJourney,journey);gl.uniform1f(u.uDiskDetail,(1-volumeBlend)*(1-smoothstep(.28,.68,journey)));gl.uniform1f(u.uFogStrength,volumeBlend*(1-smoothstep(.42,.72,journey)));gl.uniform1f(u.uLocal,0);gl.uniform1f(u.uBeacon,0);
+      gl.uniform1f(u.uYaw,yaw);gl.uniform1f(u.uPitch,pitch);gl.uniform1f(u.uDistance,worldDistance);gl.uniform3fv(u.uCenter,center);gl.uniform3fv(u.uAnchor,solarAnchor);gl.uniform1f(u.uNear,Math.max(.0000001,worldDistance*.0002));gl.uniform1f(u.uFraming,worldFraming);gl.uniform1f(u.uJourney,journey);gl.uniform1f(u.uDiskDetail,(1-volumeBlend*.6)*(1-smoothstep(.28,.68,journey)));gl.uniform1f(u.uFogStrength,volumeBlend*(1-smoothstep(.42,.72,journey)));gl.uniform1f(u.uLocal,0);gl.uniform1f(u.uBeacon,0);
       gl.uniform1f(u.uAspect,width/height);gl.uniform1f(u.uRoll,cameraRoll);gl.uniform1f(u.uDpr,dpr);gl.uniform1f(u.uZoom,zoom);
       gl.uniform1f(u.uEnergy,effectEnergy);gl.uniform1f(u.uTime,motion.matches?0:effectTime);
       gl.uniform1f(u.uBreath,breath);gl.uniform1f(u.uCompression,compression);gl.uniform1f(u.uFlowPull,flowPull);
@@ -747,7 +746,7 @@
     }
     draw=()=>{
       closeDetail=1-smoothstep(.38,.82,mapZoom);
-      volumeBlend=postAvailable?Math.max(closeDetail*.82,smoothstep(.015,.15,journey),1-smoothstep(.2,.58,pitch)):0;
+      volumeBlend=postAvailable?Math.max(closeDetail*.28,smoothstep(.015,.15,journey),1-smoothstep(.2,.58,pitch)):0;
       if((closeDetail>.02||pitch<.58)&&journey<.4)prepareCloseDetail();
       detailMix=detailReadyAt===null?0:motion.matches?1:smoothstep(0,420,performance.now()-detailReadyAt);
       materialFading=detailReadyAt!==null&&detailMix<1;
