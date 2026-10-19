@@ -46,6 +46,9 @@ const emblem=byId('studio-emblem'),coarse=matchMedia('(pointer: coarse)').matche
 emblem.addEventListener('click',event=>{origin=emblem;dispatch('percules:object',{id:'sun',preview:coarse&&event.detail!==0});});
 emblem.addEventListener('pointerenter',()=>{if(!coarse)dispatch('percules:preview',{id:'sun'});});
 emblem.addEventListener('focus',()=>dispatch('percules:preview',{id:'sun'}));
+emblem.addEventListener('pointerleave',event=>{if(!coarse&&!event.relatedTarget?.closest?.('.planet-label, #object-preview'))dispatch('percules:preview',{});});
+emblem.addEventListener('blur',()=>dispatch('percules:preview',{}));
+preview.addEventListener('pointerleave',()=>{if(!coarse)dispatch('percules:preview',{});});
 byId('preview-open').addEventListener('pointerdown',event=>event.preventDefault());
 byId('preview-open').addEventListener('click',()=>{if(previewBody)dispatch('percules:object',{id:previewBody.id});});
 document.addEventListener('percules:hover',event=>{
