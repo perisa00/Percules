@@ -9,7 +9,7 @@ const source=['gym-workout.js','space-gym.js','space-studio.js','generated-rock.
 const shaderPairs=[],draws=[],uploads=[],gymUniforms=[],viewUniforms=new Map();
 let currentSources=[],id=0;const textureRequests=[],mapUsage=[];
 const gl=new Proxy({
-VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,
+VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,COMPILE_STATUS:35713,LINK_STATUS:35714,FRAMEBUFFER_COMPLETE:36053,checkFramebufferStatus:()=>36053,
 getExtension:()=>({}),createProgram:()=>({shaders:[]}),createShader:type=>({type}),
 shaderSource:(s,text)=>{s.source=text;},attachShader:(p,s)=>p.shaders.push(s),
 linkProgram:p=>shaderPairs.push(p.shaders),getShaderParameter:()=>true,getProgramParameter:()=>true,
@@ -169,6 +169,11 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     solarModule:{createSolar:(canvas,options)=>{coreCreations++;return localSolar=createSolar(canvas,options);},worlds,bodies:worlds.studio},
     shieldModule:{SHIELD_DURATION:1.65,createShield:()=>({render:age=>shieldFrames.push(age)})},
     jumpModule:{JUMP_DURATION:.5,jumpPhase:t=>Math.sin(t*Math.PI),createJump:()=>({render(){}})}};
+  if(fault?.startsWith('close')){
+    document.createElement=()=>{const el=element();el.getContext=type=>type==='2d'?ctx2d:gl;return el;};
+    context.requestIdleCallback=fn=>idle.push(fn);context.setTimeout=fn=>idle.push(fn);
+    if(fault==='close-data')context.navigator={connection:{saveData:true}};
+  }
   if(fault==='home')context.PerculesPages={current:'apps',takeTransfer:()=>null,go:()=>false,prepareHome(){},home:view=>{homeCalls.push({time:now,view});return true;}};
   if(['live','live-start','live-data'].includes(fault)){
     document.createElement=()=>{const el=element();el.getContext=type=>type==='2d'?ctx2d:gl;return el;};
@@ -189,6 +194,24 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   function tick(count){for(let i=0;i<count;i++){now+=1000/60;const queued=[...frames.values()];frames.clear();assert.ok(queued.length<=1,'More than one animation frame scheduled');for(const fn of queued)fn(now);}}
   function navigate(world,id){document.dispatchEvent({type:'percules:navigate',detail:{world,id}});}
   tick(1);if(useWebGL)assert.equal(node('galaxy').dataset.renderer,'webgl','Exercise the actual galaxy shader pipeline');
+  if(fault?.startsWith('close')){
+    assert.equal(imageEvents.length,1,'Wide entry must not fetch the close dust map');
+    assert.equal(imageEvents[0].src,coarse?'/assets/galaxy/face-on-mobile-v3.webp':'/assets/galaxy/face-on-v3.webp');
+    const surface=node('galaxy');assert.equal(surface.dataset.depth,'wide');
+    for(let i=0;i<3;i++)surface.listeners.wheel({deltaY:-400,deltaMode:0,clientX:195,clientY:422,preventDefault(){}});
+    tick(180);assert.equal(body.dataset.scene,'galaxy');assert.equal(surface.dataset.depth,'volume','Ordinary map zoom must reveal volume without teleport');
+    const detail=imageEvents.find(image=>image.src==='/assets/galaxy/dust-detail-v1.webp');
+    if(fault==='close-data'){assert.equal(detail,undefined,'Save Data must retain procedural detail without downloading another map');return;}
+    assert.ok(detail);assert.equal(imageEvents.length,2,'One zoom gesture must request the dust map only once');detail.onload();
+    for(let i=0;i<8&&idle.length;i++)idle.shift()();tick(40);
+    assert.equal(surface.dataset.material,'dust');assert.equal(surface.dataset.renderer,'webgl');assert.equal(surface.dataset.loading,undefined);
+    node('motion-toggle').listeners.click();tick(300);assert.equal(frames.size,0,'The material fade must finish and allow a paused scene to sleep');
+    navigate('apps');for(let i=0;i<12;i++)await Promise.resolve();tick(160);assert.equal(body.dataset.scene,'system');
+    detail.onload();for(let i=0;i<8&&idle.length;i++)idle.shift()();tick(120);
+    assert.equal(frames.size,0,'A material completing behind a parked phone galaxy must not keep an invisible frame loop alive');
+    node('galaxy').listeners.webglcontextlost({preventDefault(){}});detail.onload();
+    for(let i=0;i<8&&idle.length;i++)idle.shift()();tick(2);assert.equal(surface.dataset.renderer,'canvas','Late material completion must not revive a lost context');return;
+  }
   if(fault==='live-start'){
     context.window.location.pathname='/';routeEvents.popstate();resolveCore(context.solarModule);
     for(let i=0;i<12;i++)await Promise.resolve();tick(100);
@@ -416,7 +439,9 @@ checkTouch();
 const cameraOnly=process.argv.includes('--camera');
 (cameraOnly?Promise.resolve():checkNavigation(false).then(()=>checkNavigation(false,true)).then(()=>checkNavigation(true,true)).then(()=>checkNavigation(false,false,true))).then(async()=>{
   for(const fault of cameraOnly?['home']:['slow','reject','effects','context','home'])await checkNavigation(false,false,fault==='effects'||fault==='context'||fault==='home',fault);
-  await checkNavigation(true,false,true,'home');await checkNavigation(true,true,true,'zoom');for(const mode of ['live','live-start','live-data'])await checkNavigation(false,true,true,mode);
+  await checkNavigation(true,false,true,'home');await checkNavigation(true,true,true,'zoom');
+  for(const coarse of [false,true])await checkNavigation(false,coarse,true,'close');await checkNavigation(true,true,true,'close-data');
+  for(const mode of ['live','live-start','live-data'])await checkNavigation(false,true,true,mode);
   checkSolarRecovery();checkSound();checkShaders();console.log('Navigation and resilience checks passed: center zoom, slow/failed core, stalled effects, WebGL recovery, quiet opt-in audio and single frame loop.');
 }).catch(error=>{console.error(error);process.exitCode=1;});
 
