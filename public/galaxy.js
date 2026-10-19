@@ -199,7 +199,8 @@
     for(const body of solar.getBodies()){
       const button=document.createElement(body.href?'a':'button');button.textContent=body.name;button.dataset.planet=body.id;
       if(body.href){button.href=body.href;button.target='_blank';button.rel='noopener noreferrer';button.setAttribute('aria-label',body.name+' — otvori sajt u novom tabu');}
-      else{button.setAttribute('aria-pressed','false');button.addEventListener('click',event=>{pendingSelection=null;solar.activate(body.id,coarse&&event.detail!==0);wake();});button.addEventListener('pointerenter',()=>{if(!coarse)solar.hover(body.id);});button.addEventListener('focus',()=>solar.hover(body.id));}
+      else{button.setAttribute('aria-pressed','false');button.addEventListener('click',event=>{pendingSelection=null;solar.activate(body.id,coarse&&event.detail!==0);wake();});button.addEventListener('pointerenter',()=>{if(!coarse)solar.hover(body.id);});button.addEventListener('focus',()=>solar.hover(body.id));
+        button.addEventListener('pointerleave',()=>{if(!coarse)solar.clearHover();});button.addEventListener('blur',()=>solar.clearHover());}
       planetNav.append(button);
     }
   }
@@ -236,7 +237,7 @@
     if(solar){ensureEffects();return Promise.resolve(solar);}
     if(!quiet){el('enter-solar').setAttribute('aria-busy','true');canvas.dataset.loading='true';}
     if(solarLoading)return solarLoading;
-    solarLoading=import('./solar.js?v=space-realism-1').then(module=>{
+    solarLoading=import('./solar.js?v=hover-labels-1').then(module=>{
       solar=module.createSolar(solarCanvas,{coarse,deferWork:queueIdle,onInvalidate:wake,onProject:state=>{
         const phone=el('milica-phone');phone.hidden=!state;
         if(state){phone.style.left=state.x+'px';phone.style.top=state.y+'px';phone.style.setProperty('--phone-width',state.width+'px');phone.dataset.paused=String(state.paused);}
@@ -969,7 +970,7 @@
   canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
   canvas.addEventListener('contextmenu',e=>{if(journey<.12)e.preventDefault();});
   canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1),e.clientX,e.clientY);},{passive:false});
-  canvas.addEventListener('pointerleave',e=>{pointedWorld=null;canvas.style.cursor='';updateBeaconLight();if(!pointers.size&&!coarse&&!e.relatedTarget?.closest?.('#object-preview'))solar?.clearHover();});
+  canvas.addEventListener('pointerleave',e=>{pointedWorld=null;canvas.style.cursor='';updateBeaconLight();if(!pointers.size&&!coarse&&!e.relatedTarget?.closest?.('#object-preview, .planet-label, #studio-emblem'))solar?.clearHover();});
   canvas.addEventListener('dblclick',()=>{if(journey<.12)reset();});
   canvas.addEventListener('keydown',e=>{
     if(e.altKey||e.ctrlKey||e.metaKey)return;

@@ -611,10 +611,12 @@ export function createSolar(canvas, options={}) {
   labelRoot.replaceChildren();labelButtons.clear();
   if(world==='milica')return;
   for(const body of bodies){
-    const button=document.createElement('button');button.className='planet-label';button.textContent=body.name;
+    const button=document.createElement('button');button.className='planet-label';button.textContent=body.name;button.hidden=true;
     button.setAttribute('aria-label',`Istraži: ${body.name}`);button.addEventListener('click',event=>activate(body.id,event.detail!==0&&options.coarse));
     button.addEventListener('pointerenter',()=>{if(!options.coarse)hover(body.id);});
     button.addEventListener('focus',()=>hover(body.id));
+    button.addEventListener('pointerleave',event=>{if(!options.coarse&&!event.relatedTarget?.closest?.('#object-preview'))clearHover();});
+    button.addEventListener('blur',clearHover);
     labelRoot.append(button);labelButtons.set(body.id,button);
   }
   }
@@ -676,11 +678,12 @@ export function createSolar(canvas, options={}) {
   }
   function hover(id){forcedHover=bodies.find(b=>b.id===id)||null;hoverPoint=null;publishHover();}
   function probe(x,y){forcedHover=null;hoverPoint=[x,y];publishHover();}
-  function clearHover(){hoverPoint=forcedHover=hovered=null;previewedTouchId=null;options.onHover?.(null);}
+  function clearHover(){hoverPoint=forcedHover=hovered=null;previewedTouchId=null;updateLabels();options.onHover?.(null);}
   function publishHover(){
     if(world==='milica'){options.onHover?.(null);return;}
     const body=!focus&&lastProgress>.94?(forcedHover||(hoverPoint?pick(...hoverPoint):null)):null;
     hovered=body;
+    updateLabels();
     if(!body){options.onHover?.(null);return;}
     const v=project(body.position,lastYaw,lastPitch);
     options.onHover?.({body,world,x:v.x,y:v.y,radius:body.radius*v.scale});
@@ -844,7 +847,7 @@ gl_FragColor=vec4(pow(1.-exp(-max(color,vec3(0.))*1.25),vec3(1./2.2)),uOpacity);
         gl.drawArrays(gl.TRIANGLES,0,mesh.count);
       }
       const emblem=document.getElementById('studio-emblem');if(emblem)emblem.hidden=true;
-      updateLabels(yaw,pitch,progress);publishHover();return;
+      publishHover();return;
     }
     u=use(p.orbit);gl.uniform1f(u.uAlpha,.16*(1-focusMix));
     for(const b of resources.orbitBuffers.get(world)){gl.bindBuffer(gl.ARRAY_BUFFER,b);attributes(u.position);gl.vertexAttribPointer(u.position,3,gl.FLOAT,false,0,0);gl.drawArrays(gl.LINE_STRIP,0,193);}
@@ -877,31 +880,32 @@ gl_FragColor=vec4(pow(1.-exp(-max(color,vec3(0.))*1.25),vec3(1./2.2)),uOpacity);
       u=use(p.atmosphere);gl.uniform1f(u.uOpacity,focus?.id===b.id?1:1-focusMix);gl.bindBuffer(gl.ARRAY_BUFFER,resources.sphereBuffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,resources.indexBuffer);attributes(u.position);gl.vertexAttribPointer(u.position,3,gl.FLOAT,false,20,0);
       gl.uniform3fv(u.uCenter,b.position);gl.uniform1f(u.uRadius,b.radius*1.025);gl.uniform3fv(u.uTint,b.atmosphere);gl.drawElements(gl.TRIANGLES,resources.indexCount,gl.UNSIGNED_SHORT,0);
     }
-    gl.depthMask(true);gl.activeTexture(gl.TEXTURE0);gl.disable(gl.CULL_FACE);updateLabels(yaw,pitch,progress);publishHover();
+    gl.depthMask(true);gl.activeTexture(gl.TEXTURE0);gl.disable(gl.CULL_FACE);publishHover();
   }
-  function updateLabels(yaw,pitch,progress){
+  function updateLabels(){
     if(world==='milica')return;
-    const occupied=[];
-    for(const b of bodies){const button=labelButtons.get(b.id),v=project(b.position,yaw,pitch),radius=b.radius*v.scale;
+    for(const b of bodies){const button=labelButtons.get(b.id);if(!button)continue;
+      if(b!==hovered){button.hidden=true;continue;}
+      const v=project(b.position,lastYaw,lastPitch),radius=b.radius*v.scale;
       const x=v.x,y=v.y+Math.max(radius,3)+15;
-      const visible=!focus&&progress>.94&&v.depth>0&&x>40&&x<width-40&&y>100&&y<height-125&&!occupied.some(p=>Math.abs(p[0]-x)<72&&Math.abs(p[1]-y)<30);
-      button.hidden=!visible;if(visible){button.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,0)`;occupied.push([x,y]);}
+      const visible=!focus&&lastProgress>.94&&v.depth>0&&x>40&&x<width-40&&y>100&&y<height-125;
+      button.hidden=!visible;if(visible)button.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,0)`;
     }
   }
   function renderFallback(yaw,pitch){
     const ctx=fallbackContext;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
     if(world==='generator'){
-      drawGymFallback(ctx,studioGeometry,p=>project(p,yaw,pitch),focus?.id);updateLabels(yaw,pitch,lastProgress);return;
+      drawGymFallback(ctx,studioGeometry,p=>project(p,yaw,pitch),focus?.id);return;
     }
     if(world==='milica'){
-      if(lastProgress<.01){updateLabels(yaw,pitch,lastProgress);return;}
+      if(lastProgress<.01)return;
       const fade=clamp((lastProgress-.75)/.25,0,1);ctx.globalAlpha=fade;ctx.fillStyle='#210615';ctx.fillRect(0,0,width,height);ctx.fillStyle='#ff94c5';
       for(let i=0;i<110;i++){const x=((i*137.51+yaw*12)%width+width)%width,y=((i*i*37.71+pitch*12)%height+height)%height;ctx.fillRect(x,y,i%7===0?2:1,i%7===0?2:1);}
-      ctx.globalAlpha=1;drawGymFallback(ctx,gymFallbackGeometry,p=>project(p,yaw,pitch),focus?.id,gymTime,gymState);updateLabels(yaw,pitch,lastProgress);return;
+      ctx.globalAlpha=1;drawGymFallback(ctx,gymFallbackGeometry,p=>project(p,yaw,pitch),focus?.id,gymTime,gymState);return;
     }
     for(const b of bodies){const v=project(b.position,yaw,pitch),r=Math.max(2,b.radius*v.scale);if(v.depth<=0)continue;
       const g=ctx.createRadialGradient(v.x-r*.28,v.y-r*.2,r*.1,v.x,v.y,r);g.addColorStop(0,`rgb(${b.color.map(c=>Math.round(c*255)).join(',')})`);g.addColorStop(1,'#070b14');ctx.fillStyle=g;ctx.beginPath();ctx.arc(v.x,v.y,r,0,TAU);ctx.fill();
-    }updateLabels(yaw,pitch,1);
+    }
   }
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();useFallback('context lost');});
   canvas.addEventListener('webglcontextrestored',()=>{try{gl=originalGL;enabled.clear();init();lost=false;size(width,height,dpr);options.onInvalidate?.();}catch(e){useFallback(e);}});

@@ -146,6 +146,32 @@ function checkCursorZoom(){
 }
 checkCursorZoom();
 
+function checkHoverLabels(webgl){
+  const surface=element();if(!webgl)surface.getContext=()=>null;
+  const s=createSolar(surface);s.size(1280,720,1);
+  const visible=()=>labels.children.filter(button=>!button.hidden).map(button=>button.textContent);
+  const frame={dt:1/60,yaw:.25,pitch:.73,progress:1,reducedMotion:true,viewPrepared:true};
+  for(const region of ['studio','websites','apps','support','process','contact','generator']){
+    s.setWorld(region);s.clearFocus();
+    assert.deepEqual(visible(),[],'Names must start hidden in '+region);
+    s.camera({...frame,target:[0,0,0],distance:100});s.render(frame);
+    assert.deepEqual(visible(),[],'Rendering must not reveal idle names in '+region);
+    for(const body of s.getBodies()){
+      s.hover(body.id);assert.deepEqual(visible(),[body.name],'Only the hovered name may appear in '+region);
+      assert.equal(s.isFocused(),false,'A name preview must not open details');
+    }
+    s.probe(0,0);assert.deepEqual(visible(),[],'Empty space must clear the name immediately');
+    const button=labels.children[0];button.listeners.focus();assert.deepEqual(visible(),[s.getBodies()[0].name]);
+    button.listeners.blur();assert.deepEqual(visible(),[],'Keyboard blur must clear the name');
+    button.listeners.pointerenter();assert.equal(visible().length,1);
+    button.listeners.pointerleave({});assert.deepEqual(visible(),[],'Leaving a badge must clear the name');
+    s.activate(s.getBodies()[1].id,true);assert.deepEqual(visible(),[s.getBodies()[1].name],'First touch must reveal only its name');
+    s.activate(s.getBodies()[1].id,true);assert.deepEqual(visible(),[],'Opening details must clear the name');
+  }
+  console.log('Hover names passed: all named worlds, keyboard, touch and '+(webgl?'WebGL':'2D fallback')+'.');
+}
+checkHoverLabels(true);checkHoverLabels(false);
+
 async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
   let now=0,sequence=0;
   const frames=new Map(),nodes=new Map(),events=new Map(),sceneEvents=[],shieldFrames=[],hoverEvents=[];let localSolar,resolveCore,rejectCore,coreCreations=0;const imageEvents=[],unavailable=[],homeCalls=[],idle=[],routeEvents={},assigned=[],history=[];
@@ -180,7 +206,7 @@ async function checkNavigation(reduced,coarse=false,useWebGL=false,fault=null){
     context.requestIdleCallback=fn=>idle.push(fn);context.setTimeout=fn=>idle.push(fn);
     if(fault==='live-data')context.navigator={connection:{saveData:true}};
   }
-  let script=galaxy.replace("import('./solar.js?v=space-realism-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
+  let script=galaxy.replace("import('./solar.js?v=hover-labels-1')",corePromise?"corePromise":"Promise.resolve(solarModule)")
     .replace("import('./shield.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(shieldModule)")
     .replace("import('./jump.js?v=recovery-1')",fault==='effects'?"new Promise(()=>{})":"Promise.resolve(jumpModule)")
     .replace('  let solarPoint=', '  globalThis.galaxyPoints=()=>mapPoints;\n  let solarPoint=');
